@@ -1,13 +1,16 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "theme": "willow",
+  "name": "Consensus Center",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#4F50FF",
+    "light": "#7580FF",
+    "dark": "#4436F5"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/FaviconLight.svg",
+    "dark": "/images/FaviconDark.svg"
+  },
   "navigation": {
     "pages": [
       {
@@ -34,8 +37,8 @@
     }
   },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/images/ConsensusCenterLogoLight.svg",
+    "dark": "/images/ConsensusCenterLogoDark.svg"
   },
   "navbar": {
     "links": [
@@ -53,13 +56,10 @@
   "contextual": {
     "options": [
       "copy",
-      "view",
       "chatgpt",
       "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
+      "download-pdf",
+      "assistant"
     ]
   },
   "footer": {
@@ -68,5 +68,14 @@
       "github": "https://github.com/mintlify",
       "linkedin": "https://linkedin.com/company/mintlify"
     }
+  },
+  "icons": {
+    "library": "tabler"
+  },
+  "appearance": {
+    "default": "light"
+  },
+  "fonts": {
+    "family": "Plus Jakarta Sans"
   }
 }
