@@ -20,6 +20,20 @@
           "quickstart"
         ]
       }
+    ],
+    "anchors": [
+      {
+        "anchor": "Untitled Anchor",
+        "pages": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart"
+            ]
+          }
+        ]
+      }
     ]
   },
   "logo": {
