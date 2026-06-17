@@ -56,9 +56,9 @@
   "contextual": {
     "options": [
       "copy",
+      "download-pdf",
       "chatgpt",
       "claude",
-      "download-pdf",
       "assistant"
     ]
   },
