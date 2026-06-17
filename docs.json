@@ -21,17 +21,18 @@
         ]
       }
     ],
-    "anchors": [
+    "groups": [
       {
-        "anchor": "Untitled Anchor",
+        "group": "Getting Started",
         "pages": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "index",
-              "quickstart"
-            ]
-          }
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Group",
+        "pages": [
+          "untitled-page"
         ]
       }
     ]
