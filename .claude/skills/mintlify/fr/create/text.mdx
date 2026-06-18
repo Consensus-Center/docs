@@ -1,0 +1,364 @@
+---
+title: "Mettre en forme le texte"
+description: "Mettez en forme votre documentation avec des titres Markdown, du gras, de l'italique, des liens, des citations et d'autres styles en ligne en MDX."
+keywords: ["Mise en forme Markdown", "style du texte", "titres", "liens d’ancrage", "custom heading IDs"]
+---
+
+<div id="headers">
+  ## En-têtes
+</div>
+
+Les en-têtes structurent votre contenu et créent des ancres de navigation. Ils apparaissent dans la table des matières et aident les utilisateurs à parcourir votre documentation d’un coup d’œil.
+
+<div id="creating-headers">
+  ### Création de titres
+</div>
+
+Utilisez le symbole `#` pour créer des titres de différents niveaux :
+
+```mdx
+## En-tête de section principale
+### En-tête de sous-section
+#### En-tête de sous-sous-section
+```
+
+<Tip>
+  Utilisez des titres descriptifs, riches en mots-clés, qui annoncent clairement le contenu à venir. Cela améliore la navigation des utilisateurs et le référencement.
+</Tip>
+
+<div id="custom-heading-ids">
+  ### IDs de titre personnalisés
+</div>
+
+Par défaut, Mintlify génère automatiquement les IDs d'ancrage à partir du texte du titre. Vous pouvez remplacer l'ID généré par un ID personnalisé en utilisant la syntaxe `{#custom-id}` :
+
+```mdx
+## My section {#my-custom-anchor}
+### Configuration options {#config}
+##### Deep detail {#detail}
+```
+
+L'ID personnalisé remplace l'ancrage généré automatiquement. Vous pouvez ainsi créer un lien vers le titre avec `#my-custom-anchor` ou `#config` au lieu du texte slugifié par défaut.
+
+Cela est utile lorsque vous souhaitez des liens d'ancrage stables qui ne changent pas si vous modifiez le texte du titre, ou lorsque vous avez besoin d'ancrages plus courts et plus faciles à retenir.
+
+<div id="disabling-anchor-links">
+  ### Désactivation des liens d’ancrage
+</div>
+
+Par défaut, les en-têtes incluent des liens d’ancrage cliquables permettant aux utilisateurs de créer un lien direct vers des sections spécifiques. Vous pouvez désactiver ces liens d’ancrage à l’aide de la prop `noAnchor` dans les en-têtes HTML ou React.
+
+<CodeGroup>
+
+```mdx HTML header example
+<h2 noAnchor>
+Header without anchor link
+</h2>
+```
+
+```mdx React header example
+<Heading level={2} noAnchor>
+Header without anchor link
+</Heading>
+```
+
+</CodeGroup>
+
+Lorsque `noAnchor` est utilisé, l’en-tête n’affiche pas la puce d’ancrage et cliquer sur le texte de l’en-tête ne copie pas le lien d’ancrage dans le presse‑papiers.
+
+<div id="text-formatting">
+  ## Mise en forme du texte
+</div>
+
+Nous prenons en charge la plupart des formats Markdown pour mettre en valeur et styliser le texte.
+
+<div id="basic-formatting">
+  ### Mise en forme de base
+</div>
+
+Appliquez ces styles de mise en forme à votre texte :
+
+| Style | Syntaxe | Exemple | Résultat |
+|-------|--------|---------|--------|
+| **Gras** | `**text**` | `**important note**` | **note importante** |
+| *Italique* | `_text_` | `_emphasis_` | *emphase* |
+| ~~Barré~~ | `~text~` | `~deprecated feature~` | ~~fonctionnalité obsolète~~ |
+
+<div id="combining-formats">
+  ### Combiner les formats
+</div>
+
+Vous pouvez combiner différents styles de mise en forme :
+
+```mdx
+**_gras et italique_**
+**~~gras et barré~~**
+*~~italique et barré~~*
+```
+
+***gras et italique***<br />
+**~~gras et barré~~**<br />
+*~~italique et barré~~*
+
+<div id="superscript-and-subscript">
+  ### Exposant et indice
+</div>
+
+Pour les expressions mathématiques ou les notes de bas de page, utilisez des balises HTML :
+
+| Type | Syntaxe | Exemple | Résultat |
+|------|---------|---------|----------|
+| Exposant | `<sup>text</sup>` | `example<sup>2</sup>` | example<sup>2</sup> |
+| Indice | `<sub>text</sub>` | `example<sub>n</sub>` | example<sub>n</sub> |
+
+<div id="links">
+  ## Liens
+</div>
+
+Les liens aident les utilisateurs à naviguer entre les pages et à accéder à des ressources externes. Utilisez un libellé de lien descriptif pour améliorer l’accessibilité et l’expérience utilisateur.
+
+<div id="internal-links">
+  ### Liens internes
+</div>
+
+Créez des liens vers d’autres pages de votre documentation à l’aide de chemins relatifs à la racine. Omettez l’extension de fichier (`.mdx` ou `.md`). Les chemins relatifs et les chemins comportant une extension ne fonctionnent pas en production.
+
+```mdx
+[Démarrage rapide](/quickstart)
+[Étapes](/components/steps)
+```
+
+[Démarrage rapide](/fr/quickstart)<br />
+[Étapes](/fr/components/steps)
+
+<div id="external-links">
+  ### Liens externes
+</div>
+
+Pour les ressources externes, incluez l’URL complète :
+
+```mdx
+[Guide Markdown](https://www.markdownguide.org/)
+```
+
+[Guide Markdown](https://www.markdownguide.org/)
+
+<div id="broken-links">
+  ### Liens brisés
+</div>
+
+Vous pouvez vérifier la présence de liens brisés dans votre documentation à l’aide de l’interface en ligne de commande (CLI) : [CLI](/fr/cli)
+
+```bash
+mint broken-links
+```
+
+<div id="blockquotes">
+  ## Citations
+</div>
+
+Les citations mettent en avant des informations importantes, des citations ou des exemples dans votre contenu.
+
+<div id="single-line-block-quotes">
+  ### Bloc de citation sur une seule ligne
+</div>
+
+Ajoutez `>` avant le texte pour créer un bloc de citation :
+
+```mdx
+> Ceci est une citation qui se distingue du contenu principal.
+```
+
+> Ce texte se démarque du contenu principal.
+
+
+<div id="multi-line-block-quotes">
+  ### Bloc citations sur plusieurs lignes
+</div>
+
+Pour des citations plus longues ou plusieurs paragraphes :
+
+```mdx
+> Voici le premier paragraphe d'un bloc de citation sur plusieurs lignes.
+>
+> Voici le deuxième paragraphe, séparé par une ligne vide précédée de `>`.
+```
+
+> Voici le premier paragraphe d’un bloc de citation sur plusieurs lignes.
+>
+> Voici le deuxième paragraphe, séparé par une ligne vide précédée de `>`.
+
+<Tip>
+  Utilisez les blocs de citation avec parcimonie pour préserver leur impact visuel et leur portée. Envisagez d’utiliser des [encarts](/fr/components/callouts) pour les notes, avertissements et autres informations.
+</Tip>
+
+
+<div id="mathematical-expressions">
+  ## Expressions mathématiques
+</div>
+
+Nous prenons en charge LaTeX pour le rendu des expressions et équations mathématiques. Vous pouvez remplacer la détection automatique en configurant `styles.latex` dans le fichier `docs.json` de vos [paramètres](/fr/organize/settings-appearance#styling).
+
+<div id="inline-math">
+  ### Mathématiques en ligne
+</div>
+
+Utilisez un seul signe dollar, « $ », pour les expressions mathématiques en ligne :
+
+```mdx
+Le théorème de Pythagore énonce que $(a^2 + b^2 = c^2)$ dans un triangle rectangle.
+```
+
+Le théorème de Pythagore stipule que $(a^2 + b^2 = c^2)$ dans un triangle rectangle.
+
+<div id="block-equations">
+  ### Équations en bloc
+</div>
+
+Utilisez deux signes dollar, `$$`, pour les équations isolées :
+
+```mdx
+$$
+E = mc^2
+$$
+```
+
+$$
+E = mc^2
+$$
+
+<Info>
+  La prise en charge de LaTeX requiert une syntaxe mathématique correcte. Consultez la [documentation LaTeX](https://www.latex-project.org/help/documentation/) pour des consignes complètes sur la syntaxe.
+</Info>
+
+<div id="line-breaks-and-spacing">
+  ## Sauts de ligne et espaces
+</div>
+
+Maîtrisez les espaces et les retours à la ligne pour améliorer la lisibilité du contenu.
+
+<div id="paragraph-breaks">
+  ### Sauts de paragraphe
+</div>
+
+Séparez les paragraphes par des lignes vides :
+
+```mdx
+Ceci est le premier paragraphe.
+
+Ceci est le deuxième paragraphe, séparé par une ligne vide.
+```
+
+Ceci est le premier paragraphe.
+
+Ceci est le deuxième paragraphe, séparé par une ligne blanche.
+
+<div id="manual-line-breaks">
+  ### Sauts de ligne manuels
+</div>
+
+Utilisez les balises HTML `<br />` pour forcer des retours à la ligne au sein des paragraphes :
+
+```mdx
+Cette ligne se termine ici.<br />
+Cette ligne commence sur une nouvelle ligne.
+```
+
+Cette ligne se termine ici.<br />
+Cette ligne commence sur une nouvelle ligne.
+
+<Tip>
+  Dans la plupart des cas, des sauts de paragraphe avec ligne blanche offrent une meilleure lisibilité que des retours à la ligne manuels.
+</Tip>
+
+<div id="horizontal-rules">
+  ### Filets horizontaux
+</div>
+
+Utilisez la syntaxe Markdown `---` ou les balises HTML `<hr />` pour ajouter un filet horizontal qui sépare visuellement les sections de contenu :
+
+```mdx
+Content preceding the rule.
+
+<hr />
+
+Content following the rule.
+```
+
+Contenu précédant le filet.
+
+<hr />
+
+Contenu suivant le filet.
+
+<Tip>
+  Utilisez les filets horizontaux avec parcimonie. Dans la plupart des cas, les titres offrent une meilleure séparation du contenu avec l'avantage supplémentaire des ancres de navigation.
+</Tip>
+
+<div id="comments">
+  ## Commentaires
+</div>
+
+Utilisez des commentaires de style MDX pour ajouter des notes, des rappels ou des tâches à faire dans vos fichiers sources. Les commentaires ne s'affichent pas sur la page publiée.
+
+```mdx
+{/* Ceci est un commentaire et n'apparaîtra pas dans la documentation publiée. */}
+
+{/*
+  Les commentaires multi-lignes fonctionnent aussi.
+  Utiles pour les tâches à faire ou les notes aux relecteurs.
+*/}
+```
+
+<Warning>
+  Les commentaires de style HTML `<!-- ... -->` ne sont pas pris en charge en MDX. Utilisez toujours `{/* ... */}`.
+</Warning>
+
+<div id="escape-special-characters">
+  ## Échapper les caractères spéciaux
+</div>
+
+MDX interprète `{` et `}` comme le début et la fin d'une expression JSX, et `<` comme le début d'une balise JSX. Lorsque vous souhaitez que ces caractères s'affichent comme du texte littéral, échappez-les pour que MDX n'essaie pas de les analyser.
+
+| Caractère | Comment l'échapper |
+| :--- | :--- |
+| `{` et `}` | Encadrez le caractère par des accents graves (`` `{` ``), utilisez l'entité HTML (`&#123;` pour `{`, `&#125;` pour `}`) ou écrivez-le dans une expression JSX sous forme de chaîne (`{'{'}`). |
+| `<` | Encadrez par des accents graves (`` `<` ``), utilisez l'entité HTML `&lt;`, ou écrivez `{'<'}`. |
+| `` ` `` | Utilisez une barre oblique inverse (`` \` ``) ou encadrez une plus longue portion par des doubles accents graves (`` ``code avec ` à l'intérieur`` ``). |
+| `\` | Utilisez une double barre oblique inverse (`\\`). |
+
+```mdx Exemples d'échappement
+Utilisez la syntaxe `{variable}` pour interpoler des valeurs.
+
+L'emplacement &#123;name&#125; s'affiche comme des accolades littérales.
+
+En JSX, écrivez {'{ key: value }'} pour afficher un objet littéral.
+```
+
+Dans les blocs de code délimités (```` ``` ````), MDX n'analyse pas les accolades, vous pouvez donc écrire `{variable}` directement sans échappement. L'échappement n'est requis que dans le texte courant et à l'intérieur des attributs JSX.
+
+<div id="best-practices">
+  ## Bonnes pratiques
+</div>
+
+<div id="content-organization">
+  ### Organisation du contenu
+</div>
+
+* Utilisez des titres pour établir une hiérarchie claire
+* Respectez la hiérarchie des titres (ne passez pas de H2 à H4)
+* Rédigez des titres descriptifs et riches en mots-clés
+
+<div id="text-formatting">
+  ### Mise en forme du texte
+</div>
+
+* Utilisez le gras pour mettre en évidence, pas pour des paragraphes entiers
+* Réservez l’italique aux termes, titres ou nuances d’emphase
+* Évitez la mise en forme excessive qui détourne l’attention du contenu
+
+### Liens
+
+- Rédigez un texte de lien descriptif au lieu de « cliquez ici » ou « en savoir plus »
+- Utilisez des chemins relatifs à la racine pour les liens internes
+- Testez régulièrement les liens pour éviter les liens rompus

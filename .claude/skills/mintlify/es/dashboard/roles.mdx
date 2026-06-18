@@ -1,0 +1,50 @@
+---
+title: "Roles"
+description: "Asigna roles de administrador, editor o lector para controlar niveles de acceso, permisos de edición y capacidades de despliegue en Mintlify."
+keywords: ["RBAC", "control de acceso basado en roles", "administrador", "editor", "lector", "permisos"]
+boost: 3
+---
+
+<Info>
+  El control de acceso basado en roles (RBAC) está disponible en los [planes Enterprise](https://mintlify.com/pricing?ref=rbac).
+</Info>
+
+Mintlify ofrece tres niveles de acceso al dashboard: lector, editor y administrador.
+
+|                                      | Lector | Editor | Administrador |
+| ------------------------------------ | :----: | :----: | :-----------: |
+| Ver contenido en el editor           |   ✅   |   ✅   |      ✅       |
+| Ver el dashboard y Analytics         |   ✅   |   ✅   |      ✅       |
+| Hacer preguntas al [Slack agent](/es/agent/slack) |   ✅   |   ✅   |      ✅       |
+| Editar contenido en el editor web    |   ❌   |   ✅   |      ✅       |
+| Realizar cambios en la documentación con el [Slack agent](/es/agent/slack) |   ❌   |   ✅   |      ✅       |
+| Publicar cambios                     |   ❌   |   ✅   |      ✅       |
+| Crear, renombrar y eliminar páginas  |   ❌   |   ✅   |      ✅       |
+| Reordenar la navegación              |   ❌   |   ✅   |      ✅       |
+| Subir archivos multimedia            |   ❌   |   ✅   |      ✅       |
+| Iniciar implementaciones             |   ❌   |   ✅   |      ✅       |
+| Crear y eliminar claves de API       |   ❌   |   ✅   |      ✅       |
+| Configurar integraciones             |   ❌   |   ✅   |      ✅       |
+| Configurar el assistant              |   ❌   |   ✅   |      ✅       |
+| Configurar Add-ons                   |   ❌   |   ✅   |      ✅       |
+| Invitar editores y lectores          |   ❌   |   ✅   |      ✅       |
+| Actualizar roles de usuario          |   ❌   |   ❌   |      ✅       |
+| Invitar administradores              |   ❌   |   ❌   |      ✅       |
+| Eliminar usuarios                    |   ❌   |   ❌   |      ✅       |
+| Gestionar la facturación             |   ❌   |   ❌   |      ✅       |
+| Gestionar SSO                        |   ❌   |   ❌   |      ✅       |
+| Actualizar el dominio personalizado  |   ❌   |   ❌   |      ✅       |
+| Actualizar la fuente de Git          |   ❌   |   ❌   |      ✅       |
+| Eliminar la organización             |   ❌   |   ❌   |      ✅       |
+
+<Tip>
+  Limita el acceso de administrador solo a las personas que necesiten realizar tareas de administración.
+</Tip>
+
+<div id="add-members-to-your-organization">
+  ## Agregar miembros a tu organización
+</div>
+
+Por defecto, la persona que crea tu organización en Mintlify tiene acceso de administrador. Agrega miembros adicionales en la página de [Members](https://dashboard.mintlify.com/settings/organization/members) de tu dashboard.
+
+Puedes invitar a cualquier número de miembros a tu organización.

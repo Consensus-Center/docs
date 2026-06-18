@@ -1,0 +1,442 @@
+---
+title: "Commandes"
+description: "Référence complète de toutes les commandes et options de la CLI Mintlify, y compris mint dev, mint build, mint validate, mint broken-links et plus encore."
+keywords: ["CLI", "mint", "commandes", "flags", "référence"]
+boost: 3
+---
+
+<div id="global-flags">
+  ## Flags globaux
+</div>
+
+Ces flags sont disponibles pour toutes les commandes.
+
+| Flag | Description |
+| --- | --- |
+| `--telemetry`, `-t` | Activer ou désactiver la télémétrie anonyme d'utilisation. |
+| `--help`, `-h` | Afficher l'aide de la commande. |
+| `--version`, `-v` | Afficher la version de la CLI. Alias de `mint version`. |
+
+<div id="mint-dev">
+  ## `mint dev`
+</div>
+
+Démarrer une prévisualisation locale de votre documentation.
+
+```bash
+mint dev [flags]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--port` | Port pour la prévisualisation locale. Par défaut `3000`. |
+| `--no-open` | Ne pas ouvrir le navigateur automatiquement. |
+| `--groups` | Liste séparée par des virgules de groupes d'utilisateurs à simuler pour la prévisualisation. |
+| `--disable-openapi` | Ignorer le traitement des fichiers OpenAPI pour améliorer les performances. |
+| `--local-schema` | Autoriser les fichiers OpenAPI hébergés localement servis via HTTP. |
+
+---
+
+<div id="mint-login">
+  ## `mint login`
+</div>
+
+S'authentifier avec votre compte Mintlify.
+
+```bash
+mint login
+```
+
+Ouvre une fenêtre de navigateur pour compléter l'authentification. Si le navigateur ne s'ouvre pas, la CLI affiche une URL à ouvrir manuellement et un champ pour coller le code d'autorisation. Les identifiants sont enregistrés dans `~/.config/mintlify/config.json`.
+
+Si vous avez plus d'un déploiement, la CLI vous invite à sélectionner un projet par défaut après la connexion. Vous pouvez modifier le projet par défaut ultérieurement avec `mint config set subdomain <subdomain>`.
+
+---
+
+<div id="mint-logout">
+  ## `mint logout`
+</div>
+
+Supprimer les identifiants stockés.
+
+```bash
+mint logout
+```
+
+---
+
+<div id="mint-status">
+  ## `mint status`
+</div>
+
+Afficher les détails de votre session actuelle, y compris la version de la CLI, l'adresse e-mail du compte, l'organisation et le sous-domaine configuré.
+
+```bash
+mint status
+```
+
+---
+
+<div id="mint-workflow">
+  ## `mint workflow`
+</div>
+
+Créez, listez et supprimez des [workflows](/fr/workflows) depuis le terminal. Nécessite une authentification avec `mint login`.
+
+```bash
+mint workflow <subcommand> [flags]
+```
+
+Tous les sous-commandes acceptent ces flags partagés :
+
+| Flag | Description |
+| --- | --- |
+| `--subdomain` | Sous-domaine de la documentation. Par défaut, utilise la valeur définie avec `mint config set subdomain`, ou le premier projet de votre compte. |
+| `--format` | Format de sortie : `table` (par défaut, lisible) ou `json` (brut, lisible par machine). |
+
+Lorsque `--format json` est défini, les erreurs sont écrites sur stderr sous la forme `Error: <message>` et la commande se termine avec un statut non nul, afin que vous puissiez rediriger la sortie réussie vers d'autres outils.
+
+<div id="mint-workflow-create">
+  ### `mint workflow create`
+</div>
+
+Crée un nouveau workflow. Vous pouvez passer la définition du workflow en ligne avec des flags, ou pointer vers un fichier JSON ou YAML avec `--file`.
+
+```bash
+mint workflow create [flags]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--name` | Nom du workflow. Obligatoire sauf si `--file` est fourni. |
+| `--prompt` | Instructions ajoutées au prompt de base du workflow à chaque exécution. |
+| `--type` | Type de workflow. L'une des valeurs suivantes : `changelog`, `source-code-agent`, `translations`, `writing-style`, `typo-check`, `broken-link-detection`, `seo-metadata-audit`, `assistant-docs-updates` ou `contextual-feedback-docs-updates`. Omettez pour un workflow personnalisé. |
+| `--cron` | Expression cron pour un trigger planifié. Mutuellement exclusif avec `--push-repo`. |
+| `--push-repo` | Dépôt (`owner/repo`) pour un trigger de push. Répétable pour écouter plusieurs dépôts. Mutuellement exclusif avec `--cron`. |
+| `--context-repo` | Dépôt de contexte supplémentaire (`owner/repo`) que l'agent lit lors de l'exécution du workflow. Répétable, jusqu'à 10 au total. |
+| `--automerge` | Fusionne automatiquement les pull requests ouvertes par ce workflow. Consultez [Configurer l'automerge](/fr/guides/configure-automerge) pour les prérequis de configuration. |
+| `--file` | Chemin vers un fichier JSON ou YAML contenant le corps complet du workflow. Remplace les flags en ligne. |
+
+Exactement un trigger est requis : passez `--cron` pour un workflow planifié ou un ou plusieurs flags `--push-repo` pour un workflow déclenché par push.
+
+<div id="examples">
+  #### Exemples
+</div>
+
+```bash
+# Workflow de traductions planifié
+mint workflow create \
+  --name "Translate content" \
+  --type translations \
+  --cron "0 6 * * *"
+
+# Workflow déclenché par push avec contexte supplémentaire
+mint workflow create \
+  --name "Sync API reference" \
+  --type source-code-agent \
+  --push-repo my-org/api \
+  --context-repo my-org/shared-types \
+  --automerge
+
+# Créer à partir d'un fichier
+mint workflow create --file workflow.yaml
+```
+
+Un fichier de workflow utilise la même structure que les flags en ligne. Le champ `on` contient le trigger :
+
+```yaml
+name: Translate content
+type: translations
+on:
+  cron: "0 6 * * *"
+prompt: Prefer formal tone in French translations.
+automerge: false
+context:
+  - repo: my-org/shared-content
+```
+
+<div id="mint-workflow-list">
+  ### `mint workflow list`
+</div>
+
+Liste les workflows pour le déploiement actuel.
+
+```bash
+mint workflow list [flags]
+```
+
+La sortie sous forme de tableau par défaut affiche l'ID, le nom, le type, le trigger et le statut de chaque workflow. Utilisez `--format json` pour obtenir les objets workflow complets.
+
+<div id="mint-workflow-delete">
+  ### `mint workflow delete`
+</div>
+
+Supprime un workflow par ID. Utilisez `mint workflow list` pour obtenir l'ID.
+
+```bash
+mint workflow delete <id> [flags]
+```
+
+| Argument | Description |
+| --- | --- |
+| `id` | ID du schéma du workflow à supprimer. |
+
+---
+
+<div id="mint-config">
+  ## `mint config`
+</div>
+
+Gérer les valeurs par défaut persistantes pour les commandes de la CLI. La configuration est enregistrée dans `~/.config/mintlify/config.json`.
+
+```bash
+mint config <subcommand> <key> [value]
+```
+
+| Sous-commande | Description |
+| --- | --- |
+| `set <key> <value>` | Définir une valeur de configuration. |
+| `get <key>` | Afficher une valeur de configuration. |
+| `clear <key>` | Supprimer une valeur de configuration. |
+
+<div id="configuration-keys">
+  ### Clés de configuration
+</div>
+
+| Clé | Description | Utilisé par |
+| --- | --- | --- |
+| `subdomain` | Sous-domaine par défaut de la documentation. | `mint workflow` |
+
+---
+
+<div id="mint-broken-links">
+  ## `mint broken-links`
+</div>
+
+Vérifier les liens internes cassés dans votre documentation.
+
+```bash
+mint broken-links [flags]
+```
+
+La commande exclut les fichiers correspondant aux motifs [.mintignore](/fr/organize/mintignore). Les liens pointant vers des fichiers ignorés sont signalés comme cassés.
+
+| Flag | Description |
+| --- | --- |
+| `--check-anchors` | Valider également les liens d'ancrage (par exemple, `/page#section`) par rapport aux slugs de titres. |
+| `--check-external` | Vérifier également les URLs externes pour les liens cassés. |
+| `--check-redirects` | Vérifier également que les destinations de redirection dans `docs.json` se résolvent vers des chemins valides. |
+| `--check-snippets` | Vérifier également les liens à l'intérieur des composants `<Snippet>`. |
+
+---
+
+<div id="mint-a11y">
+  ## `mint a11y`
+</div>
+
+Vérifier les problèmes d'accessibilité dans votre documentation.
+
+```bash
+mint a11y [flags]
+```
+
+Vérifie les rapports de contraste de couleur et les textes alternatifs manquants sur les images et vidéos.
+
+| Flag | Description |
+| --- | --- |
+| `--skip-contrast` | Ignorer les vérifications de contraste de couleur. |
+| `--skip-alt-text` | Ignorer les vérifications de texte alternatif manquant. |
+
+---
+
+<div id="mint-validate">
+  ## `mint validate`
+</div>
+
+Valider la compilation de votre documentation en mode strict. Se termine en erreur en cas d'avertissements ou d'erreurs. Inclut la validation automatique des spécifications OpenAPI référencées dans votre `docs.json`.
+
+```bash
+mint validate [flags]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--groups` | Liste séparée par des virgules de groupes d'utilisateurs à simuler pour la validation. |
+| `--disable-openapi` | Ignorer le traitement et la validation des fichiers OpenAPI. |
+| `--local-schema` | Autoriser la validation des fichiers OpenAPI hébergés localement servis via HTTP. Ne prend en charge que HTTPS en production. |
+
+<Note>
+  La commande autonome `mint openapi-check` est obsolète. Utilisez `mint validate` à la place.
+</Note>
+
+---
+
+<div id="mint-export">
+  ## `mint export`
+</div>
+
+Exporter votre documentation sous forme d'archive zip autonome pour la consultation et la distribution hors ligne.
+
+```bash
+mint export [flags]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--output` | Nom du fichier de sortie. Par défaut `export.zip`. |
+| `--groups` | Liste séparée par des virgules de groupes d'utilisateurs pour inclure les pages restreintes. |
+| `--disable-openapi` | Ignorer le traitement OpenAPI. |
+
+Consultez [Export hors ligne](/fr/deploy/export) pour plus de détails.
+
+---
+
+<div id="mint-score">
+  ## `mint score`
+</div>
+
+Exécuter des vérifications de préparation pour les agents sur un site de documentation public. Nécessite une authentification avec `mint login`.
+
+```bash
+mint score [url] [flags]
+```
+
+| Argument | Description |
+| --- | --- |
+| `url` | Facultatif. URL du site de documentation à vérifier. S'il est omis, la commande évalue votre sous-domaine configuré (depuis `mint config` ou le sous-domaine associé à votre compte connecté). |
+
+| Flag | Description |
+| --- | --- |
+| `--format` | Format de sortie : `table` (par défaut, coloré), `plain` (TSV pour redirection) ou `json`. |
+
+La commande affiche un score global de préparation et un détail des vérifications individuelles avec des indicateurs de réussite/échec.
+
+<div id="examples">
+  ### Exemples
+</div>
+
+```bash
+# Évaluer votre sous-domaine par défaut
+mint score
+
+# Évaluer un site spécifique
+mint score docs.example.com
+```
+
+<div id="checks">
+  ### Vérifications
+</div>
+
+Le score évalue les domaines suivants :
+
+| Vérification | Ce qu'elle vérifie |
+| --- | --- |
+| `llmsTxtExists` | Les agents peuvent atteindre un fichier [llms.txt](/fr/ai/llmstxt) à la racine du site. |
+| `llmsTxtValid` | Le fichier `llms.txt` suit le format attendu avec des titres, un résumé en citation et des liens Markdown. |
+| `llmsTxtSize` | Le fichier `llms.txt` est dans le seuil de taille pour que les agents puissent le consommer sans troncature. |
+| `llmsTxtLinksResolve` | Les liens dans `llms.txt` pointent vers des pages actives. |
+| `llmsTxtLinksMarkdown` | Les liens dans `llms.txt` utilisent la syntaxe Markdown. |
+| `llmsTxtDirective` | Le fichier `llms.txt` contient des directives d'utilisation. |
+| `llmsTxtFullExists` | Un fichier [llms-full.txt](/fr/ai/llmstxt/#llms-full-txt) est disponible pour les agents qui ont besoin du contenu complet. S'exécute indépendamment de `llmsTxtExists`. |
+| `llmsTxtFullSize` | Le fichier `llms-full.txt` a une taille raisonnable pour que les agents puissent le traiter. |
+| `llmsTxtFullValid` | Le fichier `llms-full.txt` contient un contenu valide avec des titres. |
+| `llmsTxtFullLinksResolve` | Les liens dans `llms-full.txt` pointent vers des pages actives. |
+| `skillMd` | Les agents peuvent atteindre un fichier [skill.md](https://www.mintlify.com/docs/ai/skillmd) pour l'utilisation d'outils par les agents. |
+| `contentNegotiationMarkdown` | Le site renvoie du Markdown lorsque les agents le demandent via la négociation de contenu. |
+| `contentNegotiationPlaintext` | Le site renvoie du texte brut lorsque les agents le demandent via la négociation de contenu. |
+| `mcpServerDiscoverable` | Les agents peuvent découvrir un [serveur MCP](/fr/ai/model-context-protocol) pour les agents basés sur des outils. |
+| `mcpToolCount` | Le serveur MCP expose au moins un outil. |
+| `openApiSpec` | Une spécification OpenAPI ou Swagger est disponible à un chemin standard. |
+| `robotsTxtAllowsAI` | Le fichier `robots.txt` ne bloque pas les robots d'indexation IA. |
+| `sitemapExists` | Un plan du site est disponible pour la découverte des pages. |
+| `structuredData` | La page d'accueil contient des données structurées [JSON-LD](https://json-ld.org/) (`<script type="application/ld+json">`). Indique le nombre de blocs JSON-LD et les types de schémas trouvés. |
+| `responseLatency` | Le site répond dans un délai acceptable pour les agents. |
+
+Certaines vérifications ne s'exécutent que si une vérification dont elles dépendent réussit. Si une vérification échoue, aucune des vérifications qui en dépendent ne s'exécute. Elles échouent automatiquement. Par exemple, `llmsTxtValid` ne réussit que si `llmsTxtExists` réussit d'abord.
+
+Le score global utilise une notation pondérée, de sorte que les vérifications à plus fort impact contribuent davantage à votre score.
+
+---
+
+<div id="mint-new">
+  ## `mint new`
+</div>
+
+Créer un nouveau projet de documentation en choisissant un thème ou en clonant un modèle prédéfini depuis le dépôt [mintlify/templates](https://github.com/mintlify/templates).
+
+```bash
+mint new [directory] [flags]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--name` | Nom du projet. La CLI le demande s'il n'est pas fourni en mode interactif. |
+| `--theme` | [Thème](/fr/customize/themes) du projet. La CLI le demande s'il n'est pas fourni en mode interactif. |
+| `--template` | Modèle prédéfini. La CLI le demande s'il n'est pas fourni en mode interactif. |
+| `--force` | Écraser le répertoire sans confirmation. |
+
+---
+
+<div id="mint-update">
+  ## `mint update`
+</div>
+
+Mettre à jour la CLI vers la dernière version.
+
+```bash
+mint update
+```
+
+---
+
+<div id="mint-version">
+  ## `mint version`
+</div>
+
+Afficher les versions actuelles de la CLI et du client.
+
+```bash
+mint version
+```
+
+---
+
+<div id="coming-soon">
+  ## Bientôt disponible
+</div>
+
+Ces commandes sont disponibles mais ne sont pas encore fonctionnelles. Les exécuter enregistre votre intérêt via la télémétrie de la CLI et aide à prioriser les prochaines fonctionnalités.
+
+| Commande | Description |
+| --- | --- |
+| `mint ai` | Outils de documentation assistés par IA. |
+| `mint test` | Tests de documentation. |
+| `mint signup` | Inscription de compte depuis la CLI. |
+| `mint mcp` | Serveur MCP pour la documentation. |
+
+---
+
+<div id="telemetry">
+  ## Télémétrie
+</div>
+
+La CLI collecte des données de télémétrie anonymes pour aider à améliorer Mintlify. Les données de télémétrie incluent le nom de la commande, la version de la CLI, le système d'exploitation et l'architecture. Mintlify ne collecte **pas** d'informations personnellement identifiables, de contenu de projet ni de chemins de fichiers.
+
+Par défaut, la CLI collecte les données de télémétrie. Vous pouvez vous désinscrire à tout moment en utilisant le flag `--telemetry` :
+
+```bash
+# Désactiver la télémétrie
+mint --telemetry false
+
+# Réactiver la télémétrie
+mint --telemetry true
+```
+
+Vous pouvez également désactiver la télémétrie en définissant l'une de ces variables d'environnement :
+
+| Variable | Valeur | Description |
+| --- | --- | --- |
+| `MINTLIFY_TELEMETRY_DISABLED` | `1` | Désactiver la télémétrie de la CLI Mintlify. |
+| `DO_NOT_TRACK` | `1` | Désactiver la télémétrie en utilisant le standard [Console Do Not Track](https://consoledonottrack.com/). |
+
+Votre préférence est enregistrée dans `~/.config/mintlify/config.json` et persiste entre les sessions de la CLI.

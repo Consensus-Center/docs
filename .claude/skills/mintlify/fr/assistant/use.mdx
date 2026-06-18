@@ -1,0 +1,141 @@
+---
+title: "Utiliser l'assistant"
+description: "Ouvrez l'assistant via raccourcis clavier, texte surligné, blocs de code, pièces jointes ou paramètres d'URL, et testez-le en prévisualisation locale."
+keywords: ["assistant", "raccourci clavier", "pièces jointes", "prévisualisation locale", "paramètres d'URL"]
+---
+
+Les utilisateurs disposent de plusieurs moyens pour démarrer une conversation avec l'assistant. Chaque méthode ouvre un panneau de chat sur le côté droit de votre documentation. Les utilisateurs peuvent poser n'importe quelle question et l'assistant recherche une réponse dans votre documentation. Si l'assistant ne parvient pas à récupérer des informations pertinentes, il répond qu'il ne peut pas répondre à la question.
+
+<div id="use-the-assistant-in-local-preview">
+  ## Utiliser l'assistant en prévisualisation locale
+</div>
+
+L'assistant est disponible dans votre prévisualisation locale lorsque vous vous connectez avec la CLI. Cela vous permet de tester le comportement de l'assistant, les instructions personnalisées dans `Assistant.md` et les réponses pendant que vous développez votre documentation localement.
+
+1. Si ce n'est pas déjà fait, installez la CLI avec `npm i -g mint`.
+2. Exécutez `mint login` pour vous authentifier.
+3. Exécutez `mint dev` pour démarrer la prévisualisation locale.
+
+L'assistant en prévisualisation locale utilise le même contenu indexé que votre site de documentation déployé.
+
+<div id="ui-placement">
+  ## Emplacement dans l'interface
+</div>
+
+L'assistant apparaît à deux endroits : sous forme de bouton à côté de la barre de recherche et sous forme de barre en bas de la page.
+
+<Columns cols={2}>
+  <Frame caption="Bouton de l'assistant à côté de la barre de recherche.">
+    <img
+  src="/images/assistant/assistant-button-light.png"
+  className="block dark:hidden"
+  style={{
+    width: '268px',
+    height: 'auto',
+  }}
+  alt="Barre de recherche et bouton de l'assistant en mode clair."
+/>
+<img
+  src="/images/assistant/assistant-button-dark.png"
+  className="hidden dark:block"
+  style={{
+    width: '268px',
+    height: 'auto',
+  }}
+  alt="Barre de recherche et bouton de l'assistant en mode sombre."
+/>
+</Frame>
+<Frame caption="Bouton de l'assistant en bas de la page.">
+<img
+  src="/images/assistant/assistant-bar-light.png"
+  className="block dark:hidden"
+  style={{
+    width: '268px',
+    height: 'auto',
+  }}
+  alt="Barre de l'assistant en mode clair."
+/>
+<img
+  src="/images/assistant/assistant-bar-dark.png"
+  className="hidden dark:block"
+  style={{
+    width: '268px',
+    height: 'auto',
+  }}
+  alt="Barre de l'assistant en mode sombre."
+/>
+</Frame>
+</Columns>
+
+<div id="keyboard-shortcut">
+  ## Raccourci clavier
+</div>
+
+Ouvrez le panneau de chat de l'assistant avec le raccourci clavier <kbd>Command</kbd> + <kbd>I</kbd> sur macOS et <kbd>Ctrl</kbd> + <kbd>I</kbd> sur Windows.
+
+<div id="url-parameters">
+  ## Paramètres d'URL
+</div>
+
+Ouvrez l'assistant depuis n'importe quelle page de votre site de documentation en ajoutant le paramètre de requête `?assistant` à l'URL. Utilisez-le pour créer un lien direct vers l'assistant depuis du contenu externe comme des e-mails, des réponses de support, des bannières in-app ou des parcours d'intégration.
+
+- `?assistant` : Ouvre le panneau de chat de l'assistant sans envoyer de message.
+- `?assistant=<message>` : Ouvre le panneau de chat de l'assistant et envoie `<message>` comme premier message de l'utilisateur. Encodez la valeur en URL pour que les espaces et les caractères spéciaux soient préservés dans la requête.
+
+```text Exemples
+https://yourdocs.mintlify.app/quickstart?assistant
+https://yourdocs.mintlify.app/quickstart?assistant=How%20do%20I%20get%20started%3F
+```
+
+<div id="highlight-text">
+  ## Surligner du texte
+</div>
+
+Surlignez du texte sur une page et cliquez sur le bouton contextuel **Add to assistant** pour ouvrir le panneau de chat de l'assistant et ajouter le texte surligné comme contexte. Vous pouvez ajouter plusieurs extraits de texte ou blocs de code au contexte de l'assistant.
+
+<Frame>
+<img src="/images/assistant/highlight-light.png" alt="Le bouton Add to assistant au-dessus du texte surligné en mode clair." className="block dark:hidden" />
+<img src="/images/assistant/highlight-dark.png" alt="Le bouton Add to assistant au-dessus du texte surligné en mode sombre." className="hidden dark:block" />
+</Frame>
+
+<div id="code-blocks">
+  ## Blocs de code
+</div>
+
+Cliquez sur le bouton **Demander à l'assistant** dans un bloc de code pour ouvrir le panneau de chat de l'assistant et ajouter le bloc de code comme contexte. Vous pouvez ajouter plusieurs blocs de code ou extraits de texte au contexte de l'assistant.
+
+<Frame>
+<img src="/images/assistant/code-block-light.png" alt="Le bouton Demander à l'assistant dans un bloc de code en mode clair." className="block dark:hidden" />
+<img src="/images/assistant/code-block-dark.png" alt="Le bouton Demander à l'assistant dans un bloc de code en mode sombre." className="hidden dark:block" />
+</Frame>
+
+<div id="file-attachments">
+  ## Pièces jointes
+</div>
+
+Joignez des fichiers aux messages de l'assistant pour fournir un contexte supplémentaire.
+
+Types de fichiers pris en charge :
+- **Images** : JPEG, PNG, GIF, WebP, SVG
+- **Documents** : PDF
+- **Fichiers de code et texte** : JavaScript (`.js`, `.jsx`, `.mjs`, `.cjs`), TypeScript (`.ts`, `.tsx`), Python, HTML, CSS, Markdown, MDX, JSON, YAML, XML, SQL, CSV, texte brut, scripts shell (`.sh`, `.bash`, `.env`), GraphQL, TOML, Go, Rust, Ruby, Java, Kotlin, Swift, C (`.c`, `.h`), C++ (`.cpp`, `.hpp`), C#, PHP, Lua, R, Scala
+
+Limites :
+- Taille maximale du fichier : 5 Mo par pièce jointe
+- Nombre maximal de pièces jointes par message : 10
+
+<Frame>
+<img src="/images/assistant/image-attach-light.png" alt="Une image ajoutée comme contexte dans le panneau de chat de l'assistant." className="block dark:hidden" />
+<img src="/images/assistant/image-attach-dark.png" alt="Une image ajoutée comme contexte dans le panneau de chat de l'assistant." className="hidden dark:block" />
+</Frame>
+
+<div id="troubleshooting">
+  ## Dépannage
+</div>
+
+<Accordion title="La barre de chat de l'assistant n'est pas visible">
+  Si l'interface de l'assistant n'est pas visible dans certains navigateurs, vous devrez peut-être signaler un faux positif à [EasyList](https://easylist.to). Les navigateurs qui utilisent la EasyList Cookies List, comme Brave et Comet, bloquent parfois l'assistant ou d'autres éléments de l'interface. La EasyList Cookies List inclut une règle spécifique au domaine qui masque les éléments fixes sur certains domaines pour bloquer les bannières de cookies. Cette règle affecte par inadvertance des composants d'interface légitimes.
+
+  Signalez un faux positif à [EasyList](https://github.com/easylist/easylist) pour demander la suppression de la règle. Cela résout le problème pour tous les utilisateurs une fois la liste de filtres mise à jour.
+
+</Accordion>

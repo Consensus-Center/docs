@@ -1,0 +1,442 @@
+---
+title: "命令参考"
+description: "Mintlify CLI 所有命令和选项的完整参考，包括 mint dev、mint build、mint validate、mint broken-links 等。"
+keywords: ["CLI", "mint", "命令", "选项", "参考"]
+boost: 3
+---
+
+<div id="global-flags">
+  ## 全局选项
+</div>
+
+以下选项适用于所有命令。
+
+| 选项 | 描述 |
+| --- | --- |
+| `--telemetry`, `-t` | 启用或禁用匿名使用遥测。 |
+| `--help`, `-h` | 显示命令帮助。 |
+| `--version`, `-v` | 显示 CLI 版本。`mint version` 的别名。 |
+
+<div id="mint-dev">
+  ## `mint dev`
+</div>
+
+启动文档的本地预览。
+
+```bash
+mint dev [flags]
+```
+
+| 选项 | 描述 |
+| --- | --- |
+| `--port` | 本地预览使用的端口。默认为 `3000`。 |
+| `--no-open` | 不自动打开浏览器。 |
+| `--groups` | 以逗号分隔的用户组列表，用于模拟预览。 |
+| `--disable-openapi` | 跳过 OpenAPI 文件处理以提高性能。 |
+| `--local-schema` | 允许通过 HTTP 提供的本地托管 OpenAPI 文件。 |
+
+---
+
+<div id="mint-login">
+  ## `mint login`
+</div>
+
+使用你的 Mintlify 账户进行身份验证。
+
+```bash
+mint login
+```
+
+打开浏览器窗口完成身份验证。如果浏览器未打开，CLI 会显示一个 URL 供你手动打开，并提示你粘贴授权代码。凭据保存在 `~/.config/mintlify/config.json` 中。
+
+如果你有多个部署，CLI 会在登录后提示你选择一个默认项目。你可以稍后使用 `mint config set subdomain <subdomain>` 更改默认项目。
+
+---
+
+<div id="mint-logout">
+  ## `mint logout`
+</div>
+
+移除已存储的凭据。
+
+```bash
+mint logout
+```
+
+---
+
+<div id="mint-status">
+  ## `mint status`
+</div>
+
+显示当前会话的详细信息，包括 CLI 版本、账户邮箱、组织和已配置的子域名。
+
+```bash
+mint status
+```
+
+---
+
+<div id="mint-workflow">
+  ## `mint workflow`
+</div>
+
+从终端创建、列出和删除[工作流](/workflows)。需要使用 `mint login` 进行身份验证。
+
+```bash
+mint workflow <subcommand> [flags]
+```
+
+所有子命令都接受以下共享选项：
+
+| 选项 | 描述 |
+| --- | --- |
+| `--subdomain` | 文档子域名。默认为通过 `mint config set subdomain` 设置的值，或你账户中的第一个项目。 |
+| `--format` | 输出格式：`table`（默认，美化）或 `json`（原始、机器可读）。 |
+
+当设置 `--format json` 时，错误会以 `Error: <message>` 的形式输出到 stderr，并且命令以非零状态退出，因此你可以将成功的输出通过管道传递给其他工具。
+
+<div id="mint-workflow-create">
+  ### `mint workflow create`
+</div>
+
+创建新工作流。你可以通过选项内联传递工作流定义，或者使用 `--file` 指向一个 JSON 或 YAML 文件。
+
+```bash
+mint workflow create [flags]
+```
+
+| 选项 | 描述 |
+| --- | --- |
+| `--name` | 工作流名称。除非提供了 `--file`，否则为必填项。 |
+| `--prompt` | 每次运行时附加到工作流基础提示的说明。 |
+| `--type` | 工作流类型。可选值之一：`changelog`、`source-code-agent`、`translations`、`writing-style`、`typo-check`、`broken-link-detection`、`seo-metadata-audit`、`assistant-docs-updates` 或 `contextual-feedback-docs-updates`。省略表示自定义工作流。 |
+| `--cron` | 用于计划触发的 cron 表达式。与 `--push-repo` 互斥。 |
+| `--push-repo` | 用于推送触发的仓库（`owner/repo`）。可重复以监听多个仓库。与 `--cron` 互斥。 |
+| `--context-repo` | 工作流运行时 agent 读取的附加上下文仓库（`owner/repo`）。可重复，总共最多 10 个。 |
+| `--automerge` | 自动合并此工作流打开的 pull request。设置要求请参见[配置 automerge](/zh/guides/configure-automerge)。 |
+| `--file` | 指向包含完整工作流主体的 JSON 或 YAML 文件路径。会覆盖内联选项。 |
+
+恰好需要一个触发器：传入 `--cron` 表示计划工作流，或传入一个或多个 `--push-repo` 选项表示推送触发的工作流。
+
+<div id="examples">
+  #### 示例
+</div>
+
+```bash
+# 计划翻译工作流
+mint workflow create \
+  --name "Translate content" \
+  --type translations \
+  --cron "0 6 * * *"
+
+# 带额外上下文的推送触发工作流
+mint workflow create \
+  --name "Sync API reference" \
+  --type source-code-agent \
+  --push-repo my-org/api \
+  --context-repo my-org/shared-types \
+  --automerge
+
+# 从文件创建
+mint workflow create --file workflow.yaml
+```
+
+工作流文件使用与内联选项相同的结构。`on` 字段保存触发器：
+
+```yaml
+name: Translate content
+type: translations
+on:
+  cron: "0 6 * * *"
+prompt: Prefer formal tone in French translations.
+automerge: false
+context:
+  - repo: my-org/shared-content
+```
+
+<div id="mint-workflow-list">
+  ### `mint workflow list`
+</div>
+
+列出当前部署的工作流。
+
+```bash
+mint workflow list [flags]
+```
+
+默认的表格输出显示每个工作流的 ID、名称、类型、触发器和状态。使用 `--format json` 可获取完整的工作流对象。
+
+<div id="mint-workflow-delete">
+  ### `mint workflow delete`
+</div>
+
+通过 ID 删除工作流。使用 `mint workflow list` 获取 ID。
+
+```bash
+mint workflow delete <id> [flags]
+```
+
+| 参数 | 描述 |
+| --- | --- |
+| `id` | 要删除的工作流架构 ID。 |
+
+---
+
+<div id="mint-config">
+  ## `mint config`
+</div>
+
+管理 CLI 命令的持久默认值。配置保存在 `~/.config/mintlify/config.json` 中。
+
+```bash
+mint config <subcommand> <key> [value]
+```
+
+| 子命令 | 描述 |
+| --- | --- |
+| `set <key> <value>` | 设置配置值。 |
+| `get <key>` | 显示配置值。 |
+| `clear <key>` | 移除配置值。 |
+
+<div id="configuration-keys">
+  ### 配置键
+</div>
+
+| 键 | 描述 | 使用者 |
+| --- | --- | --- |
+| `subdomain` | 默认文档子域名。 | `mint workflow` |
+
+---
+
+<div id="mint-broken-links">
+  ## `mint broken-links`
+</div>
+
+检查文档中的内部断链。
+
+```bash
+mint broken-links [flags]
+```
+
+该命令会排除匹配 [.mintignore](/zh/organize/mintignore) 模式的文件。指向被忽略文件的链接会被报告为断链。
+
+| 选项 | 描述 |
+| --- | --- |
+| `--check-anchors` | 同时验证锚链接（例如 `/page#section`）是否与标题 slug 匹配。 |
+| `--check-external` | 同时检查外部 URL 是否有断链。 |
+| `--check-redirects` | 同时检查 `docs.json` 中的重定向目标是否解析为有效路径。 |
+| `--check-snippets` | 同时检查 `<Snippet>` 组件内的链接。 |
+
+---
+
+<div id="mint-a11y">
+  ## `mint a11y`
+</div>
+
+检查文档中的无障碍性问题。
+
+```bash
+mint a11y [flags]
+```
+
+检查颜色对比度和图片、视频上缺失的替代文本。
+
+| 选项 | 描述 |
+| --- | --- |
+| `--skip-contrast` | 跳过颜色对比度检查。 |
+| `--skip-alt-text` | 跳过缺失替代文本检查。 |
+
+---
+
+<div id="mint-validate">
+  ## `mint validate`
+</div>
+
+以严格模式验证文档构建。如果存在警告或错误则以错误退出。包括对 `docs.json` 中引用的 OpenAPI 规范的自动验证。
+
+```bash
+mint validate [flags]
+```
+
+| 选项 | 描述 |
+| --- | --- |
+| `--groups` | 以逗号分隔的用户组列表，用于模拟验证。 |
+| `--disable-openapi` | 跳过 OpenAPI 文件处理和验证。 |
+| `--local-schema` | 允许验证通过 HTTP 提供的本地托管 OpenAPI 文件。生产环境仅支持 HTTPS。 |
+
+<Note>
+  独立的 `mint openapi-check` 命令已弃用。请改用 `mint validate`。
+</Note>
+
+---
+
+<div id="mint-export">
+  ## `mint export`
+</div>
+
+将文档导出为独立的 zip 存档，用于离线查看和分发。
+
+```bash
+mint export [flags]
+```
+
+| 选项 | 描述 |
+| --- | --- |
+| `--output` | 输出文件名。默认为 `export.zip`。 |
+| `--groups` | 以逗号分隔的用户组列表，用于包含受限页面。 |
+| `--disable-openapi` | 跳过 OpenAPI 处理。 |
+
+有关详细信息，请参阅[离线导出](/zh/deploy/export)。
+
+---
+
+<div id="mint-score">
+  ## `mint score`
+</div>
+
+对公共文档站点运行代理就绪性检查。需要使用 `mint login` 进行身份验证。
+
+```bash
+mint score [url] [flags]
+```
+
+| 参数 | 描述 |
+| --- | --- |
+| `url` | 可选。要检查的文档站点的 URL。如果省略，该命令将对你配置的子域名进行评分（来自 `mint config`，或与你登录账户关联的子域名）。 |
+
+| 选项 | 描述 |
+| --- | --- |
+| `--format` | 输出格式：`table`（默认，带颜色）、`plain`（可管道传输的 TSV）或 `json`。 |
+
+该命令显示总体就绪性评分以及各项检查的通过/未通过指标。
+
+<div id="examples">
+  ### 示例
+</div>
+
+```bash
+# 评分你的默认子域名
+mint score
+
+# 评分特定站点
+mint score docs.example.com
+```
+
+<div id="checks">
+  ### 检查项
+</div>
+
+评分评估以下方面：
+
+| 检查项 | 验证内容 |
+| --- | --- |
+| `llmsTxtExists` | 代理可以访问站点根目录下的 [llms.txt](/zh/ai/llmstxt) 文件。 |
+| `llmsTxtValid` | `llms.txt` 文件遵循预期格式，包含标题、引用摘要和 Markdown 链接。 |
+| `llmsTxtSize` | `llms.txt` 文件在大小阈值内，确保代理可以完整消费而不会被截断。 |
+| `llmsTxtLinksResolve` | `llms.txt` 中的链接指向有效页面。 |
+| `llmsTxtLinksMarkdown` | `llms.txt` 中的链接使用 Markdown 语法。 |
+| `llmsTxtDirective` | `llms.txt` 文件包含使用指令。 |
+| `llmsTxtFullExists` | 提供了 [llms-full.txt](/zh/ai/llmstxt/#llms-full-txt) 文件，供需要完整内容的代理使用。独立于 `llmsTxtExists` 运行。 |
+| `llmsTxtFullSize` | `llms-full.txt` 文件大小合理，代理可以处理。 |
+| `llmsTxtFullValid` | `llms-full.txt` 文件包含带标题的有效内容。 |
+| `llmsTxtFullLinksResolve` | `llms-full.txt` 中的链接指向有效页面。 |
+| `skillMd` | 代理可以访问 [skill.md](https://www.mintlify.com/docs/ai/skillmd) 文件以供代理工具使用。 |
+| `contentNegotiationMarkdown` | 当代理通过内容协商请求时，站点返回 Markdown。 |
+| `contentNegotiationPlaintext` | 当代理通过内容协商请求时，站点返回纯文本。 |
+| `mcpServerDiscoverable` | 代理可以发现用于基于工具的代理的 [MCP 服务器](/zh/ai/model-context-protocol)。 |
+| `mcpToolCount` | MCP 服务器至少公开一个工具。 |
+| `openApiSpec` | 在标准路径下有可用的 OpenAPI 或 Swagger 规范。 |
+| `robotsTxtAllowsAI` | `robots.txt` 文件没有阻止 AI 爬虫。 |
+| `sitemapExists` | 有可用的站点地图供页面发现使用。 |
+| `structuredData` | 主页包含 [JSON-LD](https://json-ld.org/) 结构化数据（`<script type="application/ld+json">`）。报告 JSON-LD 块的数量和发现的架构类型。 |
+| `responseLatency` | 站点在代理可接受的时间内响应。 |
+
+某些检查项仅在其依赖的检查项通过时才会运行。如果某个检查项失败，所有依赖它的检查项都不会运行，它们会自动失败。例如，`llmsTxtValid` 仅在 `llmsTxtExists` 先通过后才会通过。
+
+总分使用加权评分，因此影响更大的检查项对您的分数贡献更多。
+
+---
+
+<div id="mint-new">
+  ## `mint new`
+</div>
+
+通过选择主题或从 [mintlify/templates](https://github.com/mintlify/templates) 仓库克隆预定义模板来创建新的文档项目。
+
+```bash
+mint new [directory] [flags]
+```
+
+| 选项 | 描述 |
+| --- | --- |
+| `--name` | 项目名称。在交互模式下未提供时，CLI 会提示输入。 |
+| `--theme` | 项目[主题](/zh/customize/themes)。在交互模式下未提供时，CLI 会提示选择。 |
+| `--template` | 预定义模板。在交互模式下未提供时，CLI 会提示选择。 |
+| `--force` | 无需确认即覆盖目录。 |
+
+---
+
+<div id="mint-update">
+  ## `mint update`
+</div>
+
+将 CLI 更新到最新版本。
+
+```bash
+mint update
+```
+
+---
+
+<div id="mint-version">
+  ## `mint version`
+</div>
+
+显示当前 CLI 和客户端版本。
+
+```bash
+mint version
+```
+
+---
+
+<div id="coming-soon">
+  ## 即将推出
+</div>
+
+这些命令可以运行但尚未正式启用。运行它们会通过 CLI 遥测记录你的兴趣，并帮助确定下一步开发的优先级。
+
+| 命令 | 描述 |
+| --- | --- |
+| `mint ai` | AI 驱动的文档工具。 |
+| `mint test` | 文档测试。 |
+| `mint signup` | 从 CLI 注册账户。 |
+| `mint mcp` | 文档 MCP 服务器。 |
+
+---
+
+<div id="telemetry">
+  ## 遥测
+</div>
+
+CLI 收集匿名使用遥测数据以帮助改进 Mintlify。遥测数据包括命令名称、CLI 版本、操作系统和架构。Mintlify **不会**收集个人身份信息、项目内容或文件路径。
+
+默认情况下，CLI 会收集遥测数据。你可以随时使用 `--telemetry` 选项退出：
+
+```bash
+# 禁用遥测
+mint --telemetry false
+
+# 重新启用遥测
+mint --telemetry true
+```
+
+你也可以通过设置以下环境变量来禁用遥测：
+
+| 变量 | 值 | 描述 |
+| --- | --- | --- |
+| `MINTLIFY_TELEMETRY_DISABLED` | `1` | 禁用 Mintlify CLI 遥测。 |
+| `DO_NOT_TRACK` | `1` | 使用 [Console Do Not Track](https://consoledonottrack.com/) 标准禁用遥测。 |
+
+你的偏好保存在 `~/.config/mintlify/config.json` 中，在 CLI 会话之间持久有效。
