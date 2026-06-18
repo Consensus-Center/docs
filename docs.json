@@ -21,23 +21,18 @@
         ]
       }
     ],
-    "products": [
+    "groups": [
       {
-        "product": "Untitled Product",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "index",
-              "quickstart"
-            ]
-          },
-          {
-            "group": "Group",
-            "pages": [
-              "untitled-page"
-            ]
-          }
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Group",
+        "pages": [
+          "untitled-page"
         ]
       }
     ]
