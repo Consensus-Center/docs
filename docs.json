@@ -38,8 +38,8 @@
     ]
   },
   "logo": {
-    "light": "/images/ConsensusCenterLogoLight.svg",
-    "dark": "/images/ConsensusCenterLogoDark.svg"
+    "light": "/images/ConsensusCenterLogoDark.svg",
+    "dark": "/images/ConsensusCenterLogoLight.svg"
   },
   "navbar": {
     "links": [
