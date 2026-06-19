@@ -1,0 +1,216 @@
+---
+title: "Release, deployment, and rollback"
+description: "How schema versions move from review to production without exposing patients to unsafe logic."
+keywords: ["release", "deployment", "rollback", "versioning", "release gates", "staged rollout"]
+---
+
+A clinical engine release is not a normal software release. In a normal product, deployment may mean shipping a feature. In Consensus Engine, deployment may change how a biomarker is interpreted, how uncertainty is routed, how a treatment flag is surfaced, or what a patient sees about their biology. Release management must combine engineering discipline with clinical governance.
+
+<Info>
+  No clinical logic should reach patients unless it is reviewed, validated, traceable, versioned, and reversible.
+</Info>
+
+The engine architecture supports this through lifecycle states, boot-time validators, runtime decision traces, and release gates. Clinical content moves through a formal lifecycle, and rules do not run unless their lifecycle state permits it.
+
+## Release principle
+
+A clinical release should be safe to activate, safe to audit, and safe to roll back. Every release answers five questions before production. If any cannot be answered, the release should not proceed.
+
+| Question | What it covers |
+| --- | --- |
+| What changed? | Schema, rule, calibration, message, or runtime diff |
+| Who approved it? | Medical Director, clinical reviewer, engineering owner, release owner |
+| How was it tested? | Golden test cases, boot validators, regression tests, trace validation |
+| What can patients see? | Patient-facing visibility review and approved language |
+| How do we undo it? | Rollback plan, prior version, affected-rule disable path |
+
+## Types of releases
+
+Not all releases carry the same risk. A release that changes clinical interpretation must always be treated as high-risk, even if the code change looks small.
+
+| Release type | Risk |
+| --- | --- |
+| Documentation | Low to moderate |
+| Non-clinical product (UI, payment, account) | Low unless it affects clinical communication |
+| Patient-language (wording, prompts, pathway language) | Moderate to high |
+| Schema (biomarker, threshold, pattern, calibration, treatment flag) | High |
+| Runtime (evaluation logic, validators, output schema, trace) | High |
+| Safety (suppression, hardening, `CRITICAL` escalation, review-state) | Critical |
+| Treatment pathway (GLP-1 or protocol-linked flags) | Critical |
+| AI-agent (scope, provider, tool access, communication) | Moderate to critical |
+| Infrastructure (hosting, database, security, integrations) | Moderate to critical |
+
+## Versioning model
+
+Every release has explicit versioning. Historical reproducibility requires that a decision made months ago be reproducible with the rule version, calibration version, evidence, and adjustment active at that time. Without versioning, historical audit becomes unreliable.
+
+Versioned artifacts include the engine schema, runtime, biomarker definitions, thresholds and rules, calibrations, patterns, treatment flags, safety rules, message templates, evidence sources, AI-agent prompts or tools, consent text, and deployment configuration.
+
+## Release environments
+
+The system uses separate environments. Clinical logic should never move directly from development to production.
+
+```
+Development → staging validation → clinical release gate → production activation → monitoring
+```
+
+| Environment | Purpose | Data |
+| --- | --- | --- |
+| Development | Build and test changes internally | Synthetic or strictly controlled |
+| Staging | Run full validation before production | Synthetic or de-identified where possible |
+| Production | Serve real patients and clinicians | Full security, audit, consent, monitoring |
+| Research or analytics | Evaluate outcomes and calibration performance | De-identified and consent-governed only |
+
+## Pre-release checklist
+
+Before a clinical release, the team completes a structured checklist. Activation is gated, and clinical content is not `ACTIVE` until it passes review and release gates.
+
+<Check>
+  Schema version recorded, runtime version recorded, clinical content diff prepared, evidence source attached, Medical Director review completed, golden tests passing, boot validators passing, runtime output trace validated, patient-facing messages approved, review-state visibility confirmed, sensitive-data/consent impact reviewed (if applicable), AI-agent behavior reviewed (if applicable), dependency/vendor impact reviewed (if applicable), security impact reviewed (if applicable), rollback plan documented, release owner assigned, and post-release monitoring plan prepared.
+</Check>
+
+## Release gates
+
+Two gates run in parallel: a clinical gate and an engineering gate. The clinical gate exists because software tests alone cannot determine whether clinical behavior is appropriate.
+
+<Tabs>
+  <Tab title="Clinical release gate">
+    Confirms the medical content is ready by reviewing:
+
+    - **Evidence** — does every active clinical object have a cited source or approved rationale?
+    - **Medical review** — did the Medical Director approve the logic?
+    - **Calibration safety** — are applies-when conditions specific and conservative?
+    - **Suppression behavior** — are confounded results blocked or routed correctly?
+    - **Hardening behavior** — are diagnoses prevented when confirmation is required?
+    - **Treatment boundary** — are treatment flags advisory only?
+    - **Patient language** — does wording avoid diagnosis, eligibility, or prescription claims unless clinician-approved?
+    - **Visibility** — are clinician-only states blocked from final patient display?
+    - **Escalation** — are `CRITICAL` and review states routed correctly?
+    - **Monitoring** — is there a plan to detect unsafe or unexpected behavior?
+  </Tab>
+  <Tab title="Engineering release gate">
+    Confirms the system can safely run the approved clinical content by verifying:
+
+    - **Runtime compatibility** — can the runtime evaluate the new schema version?
+    - **Operator registry** — do all rule operators exist?
+    - **Runtime facts** — are all referenced facts defined?
+    - **Unit conversion** — handled through the canonical source?
+    - **Template resolution** — do all patient and clinician messages resolve?
+    - **Lifecycle enforcement** — are draft and unapproved rules blocked?
+    - **Decision trace** — does every output include rule, calibration, evidence, state, and version?
+    - **Performance** — within expected latency and volume?
+    - **Observability** — are logs, metrics, and alerts active?
+    - **Rollback** — can the release be reverted quickly?
+    - **Access control** — correct permissions in production?
+    - **Data migration** — reversible or safely forward-only?
+  </Tab>
+</Tabs>
+
+## Boot-time validators before serving
+
+Boot-time validators run before the engine serves clinical output. The rule: if the engine cannot validate itself, it should not serve patient-facing interpretation.
+
+| Validator | Action on failure |
+| --- | --- |
+| Operator registry coverage | Block affected rules or block release |
+| Runtime facts coverage | Block rules that depend on undefined facts |
+| Template resolver coverage | Block unsafe or missing messages |
+| Unit single source of truth | Block interpretation if unit handling is inconsistent |
+| Lifecycle enforcement | Prevent non-active or unapproved content from running |
+
+## Golden test execution
+
+Golden test cases run before every clinical release as the regression backbone — any schema change is re-run against expected outputs. The release suite covers normal baseline, `WATCH`, `ACTION`, `CRITICAL`, missing data, suppression, hardening, calibration, pattern detection, treatment flags, visibility, runtime trace, and lifecycle blocking.
+
+## Patient-facing message release
+
+Patient-facing language has its own release control, because a message change can be clinically meaningful even when no rule changes. Message release covers result explanations, `WATCH`/`ACTION`/`CRITICAL` explanations, missing-data prompts, calibration explanations (no broad ancestry or identity generalization), treatment pathway messages (no eligibility or authorization language), review-pending messages, and consent text. Message release must preserve the boundary that ambiguous or high-stakes results route to clinician-only review states.
+
+## AI-agent release control
+
+AI-agent releases require special review because agents can affect patient communication and clinician workflow. The release reviews agent scope, tool access, patient-facing language, clinical grounding, review-state handling, treatment boundary, sensitive data access, model provider details, monitoring, and rollback. Agents do not prescribe, do not override the deterministic engine or clinician, and route ambiguous clinical situations to licensed clinician review.
+
+## Production activation
+
+Production activation should be explicit. Approval and activation should not be collapsed: `MD_APPROVED` means clinically approved; `ACTIVE` means released for runtime use.
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+A clinical object becomes active only when its lifecycle state is `ACTIVE`, Medical Director approval exists, the release gate passed, validators passed, patient visibility was reviewed, the version was recorded, and monitoring is enabled.
+
+## Feature flags and staged rollout
+
+High-risk releases should use controlled rollout where possible. For new calibrations, treatment flags, and high-risk patterns, shadow mode is especially useful — it lets the team observe how often a rule fires and whether clinicians agree before patient-facing activation.
+
+| Stage | Description |
+| --- | --- |
+| Internal-only activation | Test with staff or synthetic cases |
+| Clinician-only visibility | Clinicians review before patient exposure |
+| Limited clinic rollout | Deploy to one operator or small cohort |
+| Limited biomarker domain | Activate only a subset of markers |
+| Shadow mode | Run rule without affecting patient output |
+| Advisory-only mode | Show clinician trace without patient display |
+| Full activation | Patient-facing after gates pass |
+
+## Rollback
+
+<Warning>
+  If a release may create unsafe interpretation, the team should be able to stop the affected logic without losing the audit record. Rollback is not only reverting code — it may involve disabling a rule, reverting a schema version, retiring a calibration, hiding a message, blocking an agent tool, or pausing a treatment pathway.
+</Warning>
+
+### Rollback triggers
+
+Rollback is triggered by predefined events, so it does not require debate in the moment: golden test failure after release, boot validator failure, patient-facing overstatement, clinician-only state exposed, calibration over-applies, treatment flag appearing as authorization, `CRITICAL` state failing to escalate, lab mapping error, agent inventing clinical advice, security or privacy incident, clinician disagreement spike, or an evidence issue discovered.
+
+### Rollback methods
+
+Different failures require different methods. The system preserves affected decision records even after rollback — auditability should not disappear when logic is reverted.
+
+| Failure | Method |
+| --- | --- |
+| Bad schema release | Revert to prior schema version |
+| Unsafe rule | Move lifecycle to `DEPRECATED`/`RETIRED`, or disable activation |
+| Calibration issue | Disable calibration or tighten applies-when logic |
+| Message issue | Revert to prior approved template |
+| Runtime issue | Revert runtime version |
+| Validator issue | Block serving until fixed |
+| Agent issue | Disable tool, prompt, or agent pathway |
+| Lab integration issue | Pause ingestion or require manual review |
+| Treatment pathway issue | Disable advisory flag and route cases to clinician review |
+| Security issue | Revoke credentials, isolate systems, rotate secrets |
+
+### Affected-decision review
+
+After rollback, the team identifies affected decisions, which decision traceability makes possible. The review answers which decision IDs and patients were affected, which rules or calibrations fired, what the patient saw, whether clinicians reviewed the output, whether treatment was affected, whether `CRITICAL` findings were involved, whether patients should be contacted, whether the rule should be revised or retired, and whether validation tests should be added.
+
+## Post-release monitoring
+
+Every clinical release has a monitoring window that begins immediately after activation and continues through a defined observation period. Signals include rule firing rate, calibration firing rate, review-state volume, suppression rate, `CRITICAL` escalation, missing-data rate, treatment flag rate, clinician rejection rate, patient confusion reports, agent output issues, runtime errors, validator warnings, and lab normalization errors.
+
+## Release documentation
+
+Each release creates a release record. Result fields must be filled with real validation outcomes — targets must not be presented as observed results.
+
+{/* TODO: Fill release validation results with real outcomes; do not present targets as observed. */}
+
+A release record includes the release ID, release date, schema version, runtime version, changed objects, clinical reviewer, engineering reviewer, evidence changes, validation results, known limitations, rollback plan, monitoring plan, incident owner, and final decision.
+
+## Deployment continuity
+
+A release process is unsafe if only one person can perform it. Engineering knowledge should not be single-threaded — the schema, runtime, and deployment should be documented so the system survives any one departure. Continuity is part of clinical risk management.
+
+Deployment continuity requires a deployment runbook, rollback runbook, access inventory, credential escrow or admin continuity, environment documentation, schema migration guide, validator documentation, incident runbook, backup procedure, an on-call or release owner, and training so more than one engineer can deploy safely.
+
+## Deployment risk matrix
+
+Before release, each change receives a deployment risk rating. Emergency releases should still be documented — speed should not erase traceability.
+
+| Risk | Example | Process |
+| --- | --- | --- |
+| Low | Internal documentation update | Reviewer and version record |
+| Moderate | Patient-facing wording change | Clinical language review and template validation |
+| High | New biomarker rule or calibration | MD review, validation, release gate, monitoring |
+| Critical | `CRITICAL` escalation, treatment flag, contraindication logic | Full governance, limited rollout, rollback plan, post-release review |
+| Emergency | Safety issue requiring immediate fix | Fast approval path, after-action review, affected-decision audit |

@@ -1,0 +1,278 @@
+---
+title: "Security, privacy, and data governance"
+description: "Protecting clinical data, consent, audit logs, and de-identified learning loops."
+keywords: ["security", "privacy", "consent", "audit logging", "de-identification", "data governance"]
+---
+
+Consensus Center handles sensitive biological, clinical, genetic, ancestry-related, operational, and decision-trace data. Security and privacy are part of the clinical safety architecture, not support functions.
+
+A preventive health system can only be trusted if patients, clinicians, partners, and regulators can understand how data is collected, why it is collected, who can access it, how it is used, how decisions are audited, and how learning happens without violating consent. The data model treats clinical data and decision records as sensitive data under Colombian Ley 1581, with HIPAA-aligned handling planned for expansion, and defines least-privilege access, segregation, audit logging, and separate consent for de-identified data used to improve calibrations.
+
+## Security principle
+
+<Info>
+  Clinical intelligence should increase with data, but patient trust should not decrease with scale.
+</Info>
+
+The system must support two goals at once: **clinical usefulness** (the engine needs enough structured data to interpret biomarkers safely) and **patient protection** (collect, access, retain, and reuse only what is justified). The safest posture is not to collect everything. It is to collect what the clinical model requires, explain why it is needed, protect it by default, and restrict its use to the purpose the patient approved.
+
+## Data categories
+
+Consensus classifies data by sensitivity and purpose. The engine's runtime facts include profile fields, biomarker states, derived flags, specimen quality, and longitudinal data, so privacy controls must cover more than raw lab values.
+
+| Category | Examples | Classification |
+| --- | --- | --- |
+| Account data | Name, email, phone, login metadata | Personal |
+| Operational data | Subscription, appointment status, workflow stage | Personal or operational |
+| Clinical profile | Age, biological sex, pregnancy status, fasting status, medications | Sensitive clinical |
+| Biomarker data | Raw labs, normalized labs, historical values | Sensitive clinical |
+| Derived clinical data | BMI, HOMA-IR, eGFR, trends, pattern flags | Sensitive clinical |
+| Specimen context | Time of draw, assay method, dehydration, fasting confirmation | Sensitive clinical context |
+| Medical history | Comorbidities, contraindications, prior interventions | Sensitive clinical |
+| Treatment pathway data | Advisory flags, clinician decisions, protocol steps | Highly sensitive clinical |
+| Genetic data | APOL1, Duffy/ACKR1, hemoglobinopathy markers | Highly sensitive |
+| Ancestry or phenotype context | Self-reported ancestry, phenotype signals, calibration context | Highly sensitive |
+| Decision records | Rules fired, calibrations applied, evidence cited, state produced | Sensitive clinical and audit |
+| Clinician notes | Review decisions, rationale, follow-up plan | Sensitive clinical |
+| Agent logs | Intake dialogue, summaries, tool calls, patient messages | Sensitive if containing clinical data |
+| De-identified learning data | Inputs, calibrations, outcomes after de-identification | Research/improvement, consent-governed |
+
+## Purpose limitation
+
+Every data category should have a defined purpose. This principle should become a system rule, not only a policy statement.
+
+| Data | Purpose |
+| --- | --- |
+| Profile and intake facts | Safe interpretation and clinician review |
+| Lab values | Biomarker interpretation, trend analysis, clinical review |
+| Medication data | Confounder detection, safety screening, protocol review |
+| Pregnancy status | Suppression, safety routing, clinical review |
+| Fasting status | Safe metabolic interpretation |
+| Genotype | Specific calibration logic and clinician review |
+| Ancestry-related context | Clinical calibration only |
+| Decision trace | Audit, reproducibility, clinical review, quality monitoring |
+| De-identified outcomes | Calibration improvement only with separate consent |
+| Payment data | Billing and access operations, not clinical interpretation |
+
+Ancestry is used only as a clinical input for documented biological corrections, with consent and transparency, and never for any purpose other than clinical calibration.
+
+## Consent model
+
+Consent should be granular enough to match the sensitivity of the data. The patient should not be forced to give broad permission for every possible use. A patient may agree to clinical interpretation but not to de-identified learning, or share labs but not genotype. The system respects these distinctions.
+
+A basic consent model includes care operations, lab interpretation, sensitive context (pregnancy, medications, contraindications), genetic data, ancestry-related context, de-identified learning, communications, and partner sharing.
+
+## Sensitive calibration inputs
+
+Ancestry, genotype, and phenotype inputs require special handling. They can improve interpretation, but they also create ethical and legal risk if misused, so the system treats them as restricted clinical inputs:
+
+- **Express consent** — the patient must understand why the input is requested.
+- **Purpose restriction** — use only for calibration and clinical review.
+- **No visual inference** — never infer ancestry or genotype from appearance.
+- **Specific mechanism** — apply only to documented genotype, phenotype, or biological mechanism.
+- **Conservative uncertainty** — route missing or conflicting signals to review.
+- **Clinician visibility** — show how the input affected interpretation.
+- **Audit trace** — record when and why the input was used.
+- **Access restriction** — limit access to authorized roles.
+- **De-identification** — use for learning only with separate consent and governance.
+
+Confirmed genotype has the highest confidence, phenotype or lab signal may trigger confirmation, and self-reported ancestry supports context but does not override genotype.
+
+## Access control
+
+Access follows least privilege. A safe system assumes that not everyone who works on the product should be able to see clinical data.
+
+| Role | Access |
+| --- | --- |
+| Patient | Own results, approved explanations, consent settings, relevant history |
+| Licensed clinician | Clinical data, decision traces, calibration context, review tools for assigned patients |
+| Medical Director | Clinical rules, calibrations, validation results, sign-off queues, governance records |
+| Operator staff | Workflow status and limited patient information required for operations |
+| Engineering | System logs and technical telemetry, restricted access to real clinical data |
+| Data science / validation | De-identified or role-approved datasets only |
+| Support team | Minimal operational view, no unnecessary clinical detail |
+| Admin | Controlled access with audit logging and elevated review |
+| External partner | Only data required by contract, consent, and care purpose |
+
+## Segregation of clinical data
+
+Clinical data should be segregated across multiple boundaries, because data leakage between patients, organizations, or purposes can cause harm even if the clinical engine works correctly: patient-level, organization-level, role-level, environment, clinical versus payment, raw versus de-identified, genetic data, and agent log segregation.
+
+## Audit logging
+
+Every sensitive action should leave a trace. Audit logging connects clinical traceability and security traceability — decision records already function as the audit unit for clinical interpretation, carrying inputs, rules fired, calibrations applied, resulting state, and cited evidence.
+
+Audit logs should record patient data viewed, lab result uploaded, lab value normalized, decision generated, clinician review completed, patient message released, consent updated, sensitive input accessed, rule changed, calibration applied, data exported, agent output generated, and security exceptions.
+
+## Decision trace as privacy-sensitive data
+
+Decision traces are useful, but they are also sensitive. A decision trace may reveal patient identity, lab values, medication context, pregnancy status, genotype or phenotype, ancestry context, the rule fired, the calibration applied, a treatment flag, the clinician decision, and the evidence source.
+
+<Warning>
+  Decision traces should not be treated as ordinary logs. They need clinical-data protection, access control, retention rules, and audit review. The system's strength is that decisions are auditable; the privacy challenge is to make them auditable only to the right people.
+</Warning>
+
+## De-identified learning loop
+
+The engine improves as decision records, calibrations, and outcomes accumulate, but improvement must be governed. Accumulated decision records, inputs, calibrations, and outcomes form the longitudinal dataset that can refine calibrations over time, and de-identified data may improve calibrations only with separate consent.
+
+<Steps>
+  <Step title="Confirm consent">
+    Confirm patient consent for de-identified learning.
+  </Step>
+  <Step title="Remove direct identifiers">
+    Strip direct identifiers from the dataset.
+  </Step>
+  <Step title="Minimize quasi-identifiers">
+    Reduce quasi-identifiers where possible.
+  </Step>
+  <Step title="Separate datasets">
+    Separate the learning dataset from the care-delivery record.
+  </Step>
+  <Step title="Preserve linkage">
+    Preserve calibration, rule, and outcome linkage in de-identified form.
+  </Step>
+  <Step title="Restrict access">
+    Restrict access to approved reviewers.
+  </Step>
+  <Step title="Monitor re-identification risk">
+    Continuously monitor re-identification risk.
+  </Step>
+  <Step title="Govern findings">
+    Use findings only through Medical Director governance.
+  </Step>
+  <Step title="Update through lifecycle">
+    Update rules through lifecycle, not direct model drift.
+  </Step>
+  <Step title="Record provenance">
+    Record which learning dataset supported any change.
+  </Step>
+</Steps>
+
+The goal is not uncontrolled data reuse. It is to learn safely from clinical outcomes while preserving patient trust.
+
+### De-identification is not magic
+
+De-identification reduces risk, but it does not eliminate it — especially for clinical, genomic, ancestry-linked, and longitudinal data. Rare combinations of lab patterns, genotype, age, geography, and clinical history can increase re-identification risk. The system treats de-identified data as protected improvement data, not as public or unrestricted data.
+
+| Risk | Mitigation |
+| --- | --- |
+| Rare genotype or phenotype | Suppress or generalize where possible |
+| Small cohort size | Avoid reporting identifiable subgroup results |
+| Longitudinal uniqueness | Limit unnecessary time granularity |
+| Partner data export | Require contractual and consent controls |
+| Internal misuse | Role-based access and audit logs |
+| Model training ambiguity | Explicit consent and provider governance |
+| Re-identification risk | Periodic privacy review |
+
+## AI-agent data handling
+
+AI agents may touch sensitive information during intake, summarization, follow-up, and clinician preparation. Their access should be narrow and tool-based: minimum necessary, tool-grounded, role-aware, no hidden clinical logic, no uncontrolled PHI exposure, output logging, source visibility, and escalation of ambiguous outputs.
+
+Privacy and safety are connected. An agent that sees too much, remembers too much, or generates beyond source data creates both data risk and clinical risk.
+
+## Model-provider governance
+
+Model-provider governance should be finalized before external deployment at scale.
+
+{/* TODO: Confirm model-provider governance with engineering. Present as a required completion area, not a finished implementation claim. */}
+
+<Warning>
+  Until these fields are confirmed, this is a required completion area, not a finished implementation claim.
+</Warning>
+
+The governance checklist should answer: provider identity, model version, processing region, data retention, training use, encryption, access logs, PHI minimization, contractual terms (healthcare data protections), change management, failure mode, and incident response.
+
+## Encryption and secrets management
+
+Secrets management and encryption in transit and at rest are required areas, with specific standards still to be confirmed. These controls should be implemented and documented before broader clinical deployment.
+
+{/* TODO: Confirm specific encryption and secrets-management standards with engineering. */}
+
+The final standard should cover encryption in transit (app, API, lab integrations, model calls, clinician portals), encryption at rest (databases, backups, logs, files, decision traces), key management, secrets storage (no secrets in code, documents, prompts, or shared files), credential rotation, environment secrets, vendor credentials, and emergency break-glass access with audit logging.
+
+## Data retention
+
+Retention should be intentional. Different data types may require different retention periods depending on clinical, legal, operational, and consent requirements. The main rule: do not keep sensitive data indefinitely without a defined clinical, legal, or governance reason.
+
+| Data | Retention guidance |
+| --- | --- |
+| Clinical records | Per medical record requirements and policy |
+| Decision traces | Retain for auditability and reproducibility |
+| Consent records | Retain as proof of permitted data use |
+| Audit logs | Retain long enough for investigation and compliance |
+| Agent logs | Retain only when useful and protected; minimize clinical text |
+| Raw uploads | Retain if needed for clinical record or audit; otherwise minimize |
+| De-identified learning data | Retain under separate governance and consent |
+| Payment records | Retain under financial requirements, separate from clinical data |
+| Temporary processing files | Delete after processing unless needed for audit |
+
+## Patient rights and data transparency
+
+The patient should be able to understand how their data is used. Privacy should not be hidden in legal language only; it should be visible in the patient experience.
+
+| Question | Answer the product should support |
+| --- | --- |
+| Why are you asking this? | The clinical interpretation purpose |
+| Who can see my data? | Role-based access and care team visibility |
+| How does this affect my result? | Whether a fact changed interpretation or routed review |
+| Can I correct it? | How to update wrong profile or clinical context |
+| Can I withdraw consent? | What can be stopped and what must remain in clinical records |
+| Is my data used to improve the system? | Only with separate consent and de-identification |
+| Is ancestry used broadly? | No, only for documented calibration |
+| Is AI making decisions from my data? | No, agents support workflow and clinicians decide |
+
+## Partner and vendor data sharing
+
+Consensus may need to share data with clinics, labs, payment providers, communication tools, AI providers, cloud vendors, and other operational partners. Vendor decisions are security decisions.
+
+Each partner relationship should define the data shared, purpose, legal basis or consent, security controls, subprocessors, region, retention, deletion, audit rights, incident notification, and the clinical boundary (the partner does not make unauthorized clinical decisions).
+
+## Security incident response
+
+A clinical system needs a defined incident response plan. The plan should connect technical containment with clinical review — a data incident can become a medical safety incident if it affects interpretation, follow-up, or patient communication.
+
+| Incident type | Response |
+| --- | --- |
+| Unauthorized access | Revoke access, investigate logs, notify per policy |
+| Wrong patient data shown | Disable affected view, investigate, notify, correct records |
+| Lab mapping error | Pause affected interpretation, review decision IDs |
+| Calibration misuse | Disable calibration, review affected patients |
+| Agent privacy leak | Disable agent pathway, review logs, update controls |
+| Vendor breach | Trigger vendor incident process and patient impact review |
+| Lost credential | Rotate secrets and audit access |
+| Data export error | Contain, notify, delete, and investigate |
+| Ransomware or infrastructure failure | Activate backup and recovery plan |
+| Clinical safety incident | Connect security review with Medical Director review |
+
+## Backup and recovery
+
+Backups should protect not only data, but clinical reproducibility. A restored system must not lose the ability to explain prior decisions. The system should be able to recover patient records, lab values, decision traces, rule versions, calibration versions, the evidence library, consent records, audit logs, clinician decisions, patient messages, and schema versions.
+
+## Security governance metrics
+
+Security and privacy should be measurable. These metrics should become part of the company's operating dashboard.
+
+| Metric | Target |
+| --- | --- |
+| Clinical data access by role | Reviewed regularly |
+| Unauthorized access events | 0 unresolved |
+| Sensitive inputs without consent | 0 |
+| Decision records without audit trace | 0 |
+| De-identified learning records without consent | 0 |
+| Agent outputs containing unnecessary sensitive data | Monitored and reduced |
+| Vendor data-processing reviews completed | 100% before production use |
+| Secrets stored outside approved vault | 0 |
+| Production data in development | 0 unless specifically approved and protected |
+| Open critical security findings | 0 before clinical release |
+| Encryption coverage | 100% for sensitive data |
+| Backup restore tests | Per defined cadence |
+| Data deletion requests | Tracked and fulfilled per policy |
+
+## Summary
+
+Security, privacy, and data governance are part of the clinical architecture of Consensus Center. The engine depends on sensitive data, so access must be limited. The system uses decision traces, so audit records must be protected. Calibration may use ancestry or genotype, so consent and purpose limitation must be strict. Learning loops may improve the engine, but only with de-identification and separate consent. AI agents may coordinate care, but their data access must be narrow and logged. Vendors may support infrastructure, but their data handling must be confirmed. Security incidents must connect technical response with clinical review.
+
+<Info>
+  The goal is not only compliance. The goal is trust. A preventive health system should help patients understand their biology without making them lose control of their data.
+</Info>

@@ -1,0 +1,209 @@
+---
+title: "Ancestry, genotype, phenotype, and context inputs"
+description: "How sensitive calibration signals are handled safely."
+keywords: ["ancestry", "genotype", "phenotype", "consent", "purpose limitation", "data protection"]
+---
+
+The calibration layer depends on context. Some of that context is clinically ordinary, such as fasting status, pregnancy status, medication exposure, recent illness, or specimen quality. Some is more sensitive, such as ancestry, genotype, or phenotype.
+
+Consensus Engine treats these inputs as clinical signals, not identity labels. Their only purpose is to improve interpretation when a documented biological mechanism changes what a biomarker means. The system does not use ancestry to generalize about a person. It uses specific, consented, clinically relevant inputs to decide whether a defined calibration may apply.
+
+## Why these inputs exist
+
+A calibration can only be applied safely if the engine knows whether its conditions are present. The purpose is not to collect more data for its own sake; it is to prevent incorrect interpretation. If the engine does not know the context, it should not pretend that it does.
+
+| Calibration | Required context |
+| --- | --- |
+| Duffy-null / ACKR1 neutrophil | Genotype, phenotype, or clinician-reviewed lab pattern |
+| APOL1 kidney-risk | Confirmed genotype where available |
+| HbA1c hemoglobinopathy | Known hemoglobinopathy, genetic result, assay context, or clinical suspicion |
+| Vitamin D context | Ancestry, altitude, geography, clinical context, MD-approved logic |
+| Fasting-dependent metabolic | Confirmed fasting status |
+| Pregnancy-sensitive | Pregnancy status |
+| Exercise-confounded | Recent strenuous exercise history |
+| Assay-confounded | Assay method, supplement use, or medication context |
+
+## Input hierarchy
+
+The engine prioritizes the most specific biological evidence available.
+
+| Input | Confidence | Engine behavior |
+| --- | --- | --- |
+| Confirmed genotype (APOL1, Duffy/ACKR1, hemoglobinopathy) | Highest | Calibration may apply if lifecycle and evidence conditions are met |
+| Confirmed phenotype | High to moderate | Calibration may apply or route to clinician review depending on stakes |
+| Repeated lab pattern | Moderate | May trigger review or confirmatory testing |
+| Self-reported ancestry | Contextual | Supports interpretation but does not override genotype |
+| Clinical context (pregnancy, fasting, illness, exercise, medications, altitude, specimen) | Variable | May suppress, modify, or delay interpretation |
+| Missing or conflicting signal | Low | Route to `INSUFFICIENT_DATA`, `AWAITING_REVIEW`, or `REQUIRES_CLINICAL_CORRELATION` |
+
+## Genotype as the strongest signal
+
+When a relevant genotype is confirmed, it should govern the calibration decision. APOL1 high-risk genotype may modify kidney-risk interpretation beyond standard creatinine or eGFR logic; Duffy/ACKR1 status may modify interpretation of baseline neutrophil counts; hemoglobinopathy markers may affect the reliability of HbA1c as a glycemic marker.
+
+Confirmed genotype is a high-confidence input because it directly maps to a defined biological mechanism. Even then, genotype does not create an automatic diagnosis or treatment decision. It changes interpretation, supports review, or affects routing — and remains under the same controls: evidence linkage, lifecycle status, clinician visibility, patient language control, and audit trace.
+
+<Note>
+  These controls prevent genotype from becoming an invisible algorithmic modifier.
+</Note>
+
+## Phenotype and lab patterns
+
+When genotype is not available, phenotype or repeated lab patterns may suggest that a calibration is relevant — for example, a recurring neutrophil pattern suggesting a Duffy-null phenotype, or a glycemic mismatch raising concern that HbA1c is not accurately reflecting glucose exposure.
+
+| Situation | Engine behavior |
+| --- | --- |
+| Phenotype clinically confirmed | Apply calibration if approved and appropriate |
+| Lab pattern suggestive but unconfirmed | Route to clinician review |
+| Pattern may affect high-stakes interpretation | Require clinical correlation before patient-facing output |
+| Confirmatory testing would reduce uncertainty | Suggest clinician-directed confirmation |
+| Pattern conflicts with other facts | Route to `REQUIRES_CLINICAL_CORRELATION` |
+
+This avoids both underuse and overuse of calibration. The system can surface the possibility without pretending the mechanism has been confirmed.
+
+## Self-reported ancestry
+
+Self-reported ancestry can be clinically useful context, but it must be handled carefully. It should not be treated as a definitive biological marker, should not override confirmed genotype, should not be used to make broad assumptions, and should not be used outside the stated clinical purpose.
+
+| Appropriate (contextual) role | Never |
+| --- | --- |
+| Supporting a calibration possibility when evidence and clinician review allow | Automatically assigning biological traits |
+| Helping decide whether confirmatory testing may be useful | Inferring risk from appearance or identity |
+| Informing clinician review | Replacing genotype or phenotype |
+| Improving transparency around lab interpretation | Segmenting patients for non-clinical purposes |
+
+This is one of the most sensitive parts of the system. The patient must understand why the question is being asked.
+
+## Context inputs beyond ancestry
+
+Not all calibration inputs are ancestry-related. Many are routine clinical context variables that can change interpretation: fasting status, pregnancy status, recent acute illness, recent strenuous exercise, medication use, biotin use, dehydration at draw, time of draw, altitude, and assay method.
+
+The engine treats context as part of the clinical input, not as an afterthought. Pregnancy, acute illness, recent strenuous exercise, fasting confirmation, and assay confounding are examples of safety conditions that can suppress, harden, or route interpretation to review.
+
+## Consent and transparency
+
+Ancestry and genotype data are sensitive. The system collects and uses them only with express consent, clear purpose, and heightened protection. Ancestry and genotype data are sensitive under Colombian Ley 1581, requiring express consent and heightened protection, and the patient must be told why the information is requested and how it is used.
+
+A patient-facing explanation should be simple: "Some lab values can be interpreted more accurately when we know certain biological or genetic context. We ask for this information only to improve clinical interpretation and only with your consent."
+
+A safe consent model includes:
+
+- **Purpose** — the data is used to interpret labs more accurately.
+- **Scope** — the data is used only for clinical calibration and related review.
+- **Voluntary nature** — the patient understands what is optional.
+- **Impact of missing data** — some calibrations may not apply without the input.
+- **Protection** — sensitive data receives heightened access controls.
+- **Review** — clinicians can inspect how the input affected interpretation.
+- **Withdrawal or correction** — the patient can update or correct information.
+
+<Info>
+  The goal is not only compliance. The goal is trust.
+</Info>
+
+## Purpose limitation
+
+Sensitive inputs are used only for their stated clinical purpose: calibration and interpretation.
+
+| Permitted | Prohibited |
+| --- | --- |
+| Applying a documented biomarker calibration | Marketing segmentation |
+| Routing uncertain results to clinician review | Non-clinical profiling |
+| Suggesting confirmatory testing when appropriate | Inferring unrelated traits |
+| Improving de-identified calibration research with consent | Unconsented model training |
+| Supporting clinical audit | Broad identity classification |
+
+Ancestry is never used for any purpose other than clinical calibration. This should remain a hard product, legal, and clinical boundary.
+
+## Conservative handling of uncertainty
+
+The engine should never force a calibration when the input signal is weak, missing, or contradictory.
+
+| Condition | Output |
+| --- | --- |
+| Required input missing | `INSUFFICIENT_DATA` |
+| Signal suggestive but not confirmed | `AWAITING_REVIEW` |
+| Signals conflict | `REQUIRES_CLINICAL_CORRELATION` |
+| Calibration high-stakes | Clinician review required |
+| Calibration evidence incomplete | Keep in draft, clinician-only, or research mode |
+| Patient consent absent | Do not use ancestry or genotype input |
+
+This preserves the preventive tone of the system: act early when justified, but escalate when uncertain.
+
+## Avoiding misuse
+
+The system must avoid broad racial generalizations. A calibration applies to a defined mechanism, not to appearance, identity, or unsupported assumptions.
+
+| Unsafe generalization | Correct encoding |
+| --- | --- |
+| "Patient appears to be Black, apply neutrophil calibration" | "Confirmed Duffy-null status or clinician-reviewed phenotype supports calibration" |
+| "Patient reports African ancestry, assume APOL1 risk" | "APOL1 risk requires genotype confirmation or clinician-directed testing" |
+| "HbA1c is unreliable for this ancestry group" | "HbA1c may be affected if hemoglobinopathy or assay-specific concern is present" |
+| "Vitamin D threshold changes automatically by ethnicity" | "Apply only the approved calibration logic based on defined context and evidence" |
+
+The system encodes specific, documented biological mechanisms, not broad racial generalizations. This is both scientifically and ethically necessary.
+
+## Clinician-facing visibility
+
+Clinicians should see exactly how ancestry, genotype, phenotype, or context influenced an interpretation. The clinician view shows the input source, confidence level, calibration applied, applies-when condition, evidence source, version, review requirement, patient-visible effect, and a link to the decision record.
+
+This protects the physician from black-box interpretation. The clinician should never have to guess why the engine changed a result.
+
+## Patient-facing language
+
+Patient-facing language should be accurate, simple, and non-alarming. The patient does not need every technical detail, but the explanation should not hide the existence of context-based interpretation.
+
+| Scenario | Example language |
+| --- | --- |
+| Calibration applied with confidence | "Your result was interpreted using additional biological context that may affect this marker." |
+| Calibration requires review | "This result may need additional clinical context before we can explain it accurately." |
+| Missing context | "We need one more piece of information before interpreting this marker safely." |
+| Conflicting signals | "This result is being reviewed because some inputs point in different directions." |
+| Confirmatory testing suggested | "Your clinician may recommend a confirmatory test to interpret this result more accurately." |
+
+The tone should be preventive and calm. The system avoids language that sounds deterministic when the input is uncertain.
+
+## Data protection
+
+Sensitive inputs require stronger protection than ordinary product data. Clinical data and decision records are sensitive data, with least-privilege access, segregation, and audit logging, and de-identified data may improve calibrations only with separate consent.
+
+For ancestry, genotype, and phenotype inputs, the protection model includes express consent, access restriction to authorized clinical or technical roles, purpose restriction to clinical interpretation, audit logging, data minimization, segregation from general product data, consented de-identification for learning, and a retention policy that avoids indefinite storage without clinical or legal basis.
+
+Traceability and privacy must work together. The system should be explainable without exposing sensitive information unnecessarily.
+
+## Runtime example
+
+<Tabs>
+  <Tab title="Duffy-null neutrophil count">
+    | Step | Value |
+    | --- | --- |
+    | Raw biomarker | Absolute neutrophil count below standard range |
+    | Context available | Confirmed Duffy-null / ACKR1 status |
+    | Input confidence | High |
+    | Calibration check | Duffy-null calibration applies |
+    | Evidence trace | Approved source linked through evidence library |
+    | Lifecycle check | Calibration is `ACTIVE` |
+    | Output behavior | Avoid automatic abnormal labeling if calibrated interpretation supports it |
+    | Review routing | Clinician sees calibration trace; patient receives cautious explanation |
+    | Decision record | Stores input, calibration, rule, evidence, state, and version |
+  </Tab>
+  <Tab title="Uncertain HbA1c">
+    | Step | Value |
+    | --- | --- |
+    | Raw biomarker | HbA1c appears elevated |
+    | Context available | Possible hemoglobinopathy, not confirmed |
+    | Input confidence | Moderate to uncertain |
+    | Calibration check | HbA1c reliability concern detected |
+    | Output behavior | Do not overstate glycemic conclusion |
+    | Review routing | `REQUIRES_CLINICAL_CORRELATION` |
+    | Next step | Clinician may consider glucose, CGM, fructosamine, repeat testing, or confirmatory evaluation |
+  </Tab>
+</Tabs>
+
+These examples show how the engine prevents both misclassification and overconfidence.
+
+## Design principle
+
+<Tip>
+  Use sensitive context only when it improves clinical interpretation, only with consent, only through defined mechanisms, and only under medical governance.
+</Tip>
+
+This principle protects the patient, the clinician, and the company.

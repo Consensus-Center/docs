@@ -1,0 +1,193 @@
+---
+title: "Calibration methodology"
+description: "How evidence becomes a reviewed, versioned clinical rule."
+keywords: ["calibration", "evidence grading", "applies-when logic", "reproducibility", "ancestry"]
+---
+
+Calibration is one of the core technical and scientific layers of the Consensus Engine. A calibration is a structured adjustment to how a biomarker is interpreted when a defined biological or contextual condition changes what that biomarker means. It is not a personalization slogan and not a loose AI inference. It is a reviewed, versioned, evidence-linked rule that applies only when specific conditions are met.
+
+The purpose of calibration is preventive and corrective: prevent avoidable misclassification, correct known interpretation bias, and give clinicians a more accurate view of the patient's biology before a conclusion is made.
+
+## Why calibration is necessary
+
+Standard laboratory ranges are useful, but not always sufficient. Many ranges and clinical decision rules were developed from populations that under-represent people of African descent and other groups. When applied uniformly, those ranges can create systematic errors rather than random variation.
+
+Some biomarker values cannot be interpreted correctly without knowing the biological and clinical context in which they appear. For Consensus Center, this matters because the company is building preventive medicine infrastructure for populations where conventional interpretation can miss risk, overstate risk, or misclassify normal biological variation.
+
+<Info>
+  The goal is not to create separate medicine for different groups. The goal is to interpret the same clinical data with the right biological context.
+</Info>
+
+## What a calibration is, and is not
+
+A calibration is a structured rule that modifies interpretation when defined conditions apply. Each calibration record includes a biomarker, an applies-when condition, machine-readable logic, a human-readable explanation, the adjustment, an evidence level, a rationale, provenance, a lifecycle status, and a clinician-confirmation requirement.
+
+<Columns cols={2}>
+  <Card title="A calibration is" icon="circle-check">
+    A defined biological or contextual correction, based on genotype, phenotype, clinical context, or patient-disclosed information. A deterministic rule with evidence and version history that may support clinician review and can change as evidence evolves. A decision-support input for a licensed clinician.
+  </Card>
+  <Card title="A calibration is not" icon="circle-x">
+    A racial assumption, a visual inference, a diagnosis, a black-box model output, a permanent label, or a treatment authorization. The engine must never generalize from appearance, identity, or broad social categories.
+  </Card>
+</Columns>
+
+Ancestry is used as a clinical input to interpretation, not as a social category, and only to apply documented biological corrections with consent and transparency.
+
+## The calibration pipeline
+
+A calibration moves from scientific signal to live engine rule through a controlled pipeline. A calibration does not go live simply because the mechanism is plausible. It must be encoded, reviewed, gated, and monitored.
+
+<Steps>
+  <Step title="Identify signal">
+    Surface a candidate calibration where standard interpretation may be wrong.
+  </Step>
+  <Step title="Gather evidence">
+    Assemble an evidence package supporting the mechanism.
+  </Step>
+  <Step title="Grade evidence">
+    Assign an evidence level.
+  </Step>
+  <Step title="Encode rule">
+    Express the calibration as machine-readable logic in `DRAFT`.
+  </Step>
+  <Step title="Review clinically">
+    Medical Director review.
+  </Step>
+  <Step title="Approve">
+    MD-approved calibration.
+  </Step>
+  <Step title="Activate">
+    Release-gated `ACTIVE` rule.
+  </Step>
+  <Step title="Monitor">
+    Outcomes, safety review, and version updates.
+  </Step>
+  <Step title="Revise or retire">
+    Updated, deprecated, or retired calibration.
+  </Step>
+</Steps>
+
+### Step 1: identify a documented signal
+
+The first step is to identify a biomarker where standard interpretation may be systematically wrong or incomplete. A signal may come from clinical literature, clinical guidelines, genetic mechanisms, phenotype mechanisms, assay or specimen context, or outcomes data.
+
+The signal must be specific. "This group is different" is not enough. The system needs a defined mechanism, a defined biomarker, a defined applies-when condition, and a clinically meaningful interpretation change.
+
+### Step 2: gather and grade evidence
+
+The evidence package should confirm the mechanism is documented, the effect is clinically meaningful, it changes interpretation or action, it applies to the patient facts available, whether the evidence is population-specific, whether it requires clinician confirmation, and whether contrary evidence exists.
+
+{/* TODO: Confirm the evidence grading scale with the Medical Director before presenting this as a definitive governance standard. The source marks this scale as proposed. */}
+
+A recommended evidence scale, to be finalized by the Medical Director:
+
+| Grade | Evidence | Use |
+| --- | --- | --- |
+| A | Guideline-backed or strong replicated clinical evidence | Eligible for activation after MD review |
+| B | Peer-reviewed cohort evidence with clinical relevance | Eligible with MD review and monitoring |
+| C | Mechanistic evidence with limited clinical outcome data | Clinician-review only or conservative use |
+| D | Expert consensus or internal hypothesis | Not patient-visible without further validation |
+| E | Exploratory or unvalidated | Research only, not active clinical logic |
+
+### Step 3: encode applies-when logic
+
+The applies-when condition is the heart of a calibration. It defines when the calibration is allowed to apply and must exist in two forms: human-readable (for clinicians, reviewers, and auditors) and machine-readable (for deterministic runtime evaluation).
+
+Applies-when inputs include confirmed genotype (APOL1 high-risk, Duffy/ACKR1 status, hemoglobinopathy marker), phenotype or lab signal, self-reported ancestry (context, not override), specimen context, clinical context (pregnancy, recent acute illness, medication exposure, altitude), and longitudinal pattern.
+
+The input priority order: confirmed genotype has the highest confidence, phenotype or lab signal may trigger confirmation, and self-reported ancestry supports context but does not override genotype. Calibration becomes more confident as the input becomes more biologically specific.
+
+### Step 4: handle uncertainty conservatively
+
+Calibration should not force certainty where certainty does not exist.
+
+| Situation | Engine behavior |
+| --- | --- |
+| Genotype confirmed | Apply calibration with highest confidence |
+| Phenotype suggestive but unconfirmed | Flag for clinician review or recommend confirmatory testing |
+| Self-report only | Apply conservatively, with clinician visibility |
+| Conflicting signals | Route to `REQUIRES_CLINICAL_CORRELATION` |
+| Missing required fact | Return `INSUFFICIENT_DATA` or `AWAITING_REVIEW` |
+| High-stakes interpretation | Require clinician review before patient-facing output |
+
+<Warning>
+  Calibration should reduce misclassification, not introduce new hidden assumptions. Where genotype is confirmed, it governs. Where only self-report or phenotype is available, the engine applies calibration conservatively or requests confirmation rather than asserting.
+</Warning>
+
+## Canonical calibration domains
+
+These are not broad demographic adjustments. They are mechanism-specific corrections, encoded as evidence-linked calibrations rather than loose model inferences.
+
+| Domain | Mechanism | Benefit |
+| --- | --- | --- |
+| Duffy-null / ACKR1 neutrophil phenotype | Lower baseline neutrophils may be mistaken for neutropenia | Avoids unnecessary concern, workups, or treatment delays |
+| APOL1 high-risk genotype | Kidney risk may be under-recognized by standard creatinine or eGFR | Surfaces risk earlier for clinician review |
+| Hemoglobinopathies | HbA1c may not reflect true glycemia | Prevents diabetes risk from being over- or under-staged |
+| Vitamin D by ancestry or altitude | Generic cutoffs may misclassify deficiency | Supports more context-aware interpretation |
+
+## Calibration and patient visibility
+
+Calibration may affect what the patient sees, but it must do so carefully:
+
+- **Clear and low-risk:** the patient sees the calibrated interpretation in plain language; the clinician can inspect the calibration trace.
+- **Uncertain or moderate-risk:** the patient sees cautious language or a request for review; the clinician sees the full applies-when logic and evidence.
+- **High-stakes or conflicting:** the patient does not receive a final interpretation automatically; the clinician reviews before release.
+
+The patient should not need to understand the full technical calibration, but the system should communicate the practical meaning honestly — for example: "Your result may require interpretation with additional biological context. A clinician will review it before a final explanation is shown."
+
+## Calibration and lifecycle governance
+
+A calibration should not run merely because it exists in the schema. It moves through the same clinical lifecycle as other clinical content:
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+Rules do not run unless their lifecycle state permits it, enforced by a boot validator. Lifecycle governance answers who added the calibration, what evidence supports it, who reviewed it clinically, whether it is allowed to run, whether it is patient-visible, whether it requires clinician confirmation, whether it has been updated, and whether it should be retired. This protects the system from unreviewed corrections affecting patient-facing output.
+
+## Versioning and reproducibility
+
+Every calibration must be versioned. If a patient's result was interpreted six months ago, the engine should show which calibration version was applied, what evidence supported it, and whether it was active or under review. Versioning supports clinical audit, regulatory review, medical review, scientific learning, and incident review.
+
+A calibration library without versioning would be unsafe. The system would know what it believes today, but not what it believed when the decision was made.
+
+## Monitoring and improvement
+
+Calibration is not a one-time event. Once active, calibrations should be evaluated against clinical accuracy, alert burden, safety, equity, outcomes, clinician feedback, and patient communication.
+
+Because decision records connect inputs, calibrations, rules, evidence, and outcomes over time, the system's scientific moat compounds: reviewed calibrations become better as real-world decision records and outcomes accumulate under proper consent and privacy controls.
+
+## Ethical handling of ancestry and genotype
+
+Calibration depends on sensitive inputs, which requires strict ethical boundaries. Ancestry and genotype data are sensitive data under Colombian Ley 1581, requiring express consent and heightened protection. The patient must be told why the information is requested and how it is used.
+
+The operational principles are consent, purpose limitation, transparency, specificity (defined mechanisms, not broad categories), clinician oversight, data minimization, and protection.
+
+<Warning>
+  A calibration system that mishandles ancestry would damage the exact population it is meant to serve. This is essential to trust, not only a compliance requirement.
+</Warning>
+
+## Example calibration trace
+
+| Step | Example |
+| --- | --- |
+| Biomarker | Absolute neutrophil count |
+| Raw result | Below standard reference range |
+| Context input | Confirmed Duffy-null / ACKR1 phenotype, or clinician-reviewed suggestive pattern |
+| Applies-when rule | Duffy-null neutrophil calibration condition met |
+| Adjustment | Interpret against calibrated baseline logic |
+| Evidence | Cited source from evidence library |
+| Lifecycle | Calibration is `ACTIVE` |
+| Output | Avoid automatic neutropenia label; route to appropriate state |
+| Visibility | Patient sees cautious, plain-language explanation if approved |
+| Clinician view | Full calibration, rule, evidence, and version trace |
+
+The purpose is not to ignore a low value. The purpose is to interpret it correctly.
+
+## Defensive design principle
+
+Calibration creates power, and responsibility. The engine must avoid two opposite errors: **no calibration**, where known biological differences are ignored and cause misclassification, and **over-calibration**, where weak or uncertain context is overused and creates new bias.
+
+<Tip>
+  Apply calibration when the mechanism is defined, the evidence is sufficient, the condition is present, and the lifecycle allows it. Otherwise, escalate to clinician review.
+</Tip>

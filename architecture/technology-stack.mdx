@@ -1,0 +1,186 @@
+---
+title: "Technology stack and dependencies"
+description: "System layers, external services, open-source inventory, and continuity controls."
+keywords: ["technology stack", "integrations", "dependencies", "open-source inventory", "continuity"]
+---
+
+Consensus Center's technical stack should be documented as a clinical infrastructure system, not a generic software stack. The product includes applications, agents, integrations, data storage, and workflow automation, but the clinical logic must remain inside the reviewed engine schema and deterministic runtime. This prevents clinical interpretation from becoming fragmented across app code, prompts, vendor tools, or informal operational processes.
+
+The system is AI-native and configuration-driven: a structured clinical-knowledge schema with 67 tables, a deterministic runtime that reads it, AI agents that orchestrate workflow, member and operator applications, and integrations for labs, payments, and communications. Clinical logic lives in the reviewed schema, not scattered in application code.
+
+## Technology principle
+
+<Info>
+  Clinical logic belongs in the governed engine. Product code, agents, and integrations should serve that engine, not redefine it.
+</Info>
+
+Clinical systems become unsafe when logic is duplicated across many places: a threshold in the app, a different threshold in an agent prompt, a treatment condition in a workflow tool, a safety exception in backend code, a patient-facing message outside medical review. That structure is hard to audit and easy to break.
+
+Consensus keeps interpretation, calibration, pathway logic, safety controls, runtime contracts, and lifecycle governance in the engine schema. The surrounding stack calls the engine, displays the result, coordinates workflow, and preserves the decision trace.
+
+## High-level stack map
+
+The system can be organized into seven technical layers. Some implementation details — language, runtime, vendors, hosting, and model providers — are marked as items to confirm with engineering.
+
+{/* TODO: Confirm implementation details (language, runtime, vendors, hosting, model providers) with engineering. */}
+
+| Layer | Role | Boundary |
+| --- | --- | --- |
+| Engine schema | Stores reviewed clinical knowledge, rules, calibrations, patterns, safety logic, governance metadata | Source of truth for clinical logic |
+| Deterministic runtime | Evaluates patient facts against the engine schema | Produces structured decision support |
+| AI agents | Coordinate intake, scheduling, record consolidation, follow-up, orchestration | No diagnosis, prescription, or clinical decision |
+| Member app | Presents subscriptions, intake, results, next steps, follow-up | Shows only approved patient-facing output |
+| Operator app | Supports clinic operations, patient management, review workflows | Does not bypass clinical governance |
+| Data and storage | Stores clinical data, runtime facts, decision traces, audit logs, operational records | Must protect sensitive data |
+| Integrations | Connect labs, payments, communications, identity, external services | Must preserve data integrity and consent boundaries |
+
+## Engine schema and runtime
+
+The engine schema is the clinical knowledge layer, containing the structured objects that define how interpretation works: biomarkers, reference sources, unit conversions, status rules, trend rules, derived formulas, calibrations, patterns, treatment flags, safety rules, the runtime output schema, the runtime facts catalog, and lifecycle controls. The v2.8.4 schema spans 67 tables, with each output tracing to a specific rule and cited source rather than to an opaque model.
+
+The deterministic runtime reads the schema and evaluates patient facts. It should not contain hidden clinical logic that bypasses the schema. When a rule fires, the runtime produces a structured output with decision ID, input facts, rule trace, calibration trace, evidence trace, resulting state, and visibility handling.
+
+### Runtime validation responsibilities
+
+The runtime is not only an evaluator. It is also a safety gate. Before serving, it runs boot-time validators confirming operator registry coverage, runtime facts coverage, template resolver coverage, unit single source of truth, and lifecycle enforcement.
+
+The runtime should fail safely. If a rule references a missing fact, an unknown operator, an unapproved lifecycle state, or an unresolved message, the system blocks affected output rather than improvising.
+
+## AI agents layer
+
+AI agents sit around the deterministic engine. Their role is operational: collecting information, organizing workflows, preparing records, and supporting communication. They handle intake, record consolidation, missing-data detection, follow-up, patient communication (in approved language), clinician support, and treatment pathway coordination (surfacing clinician-required advisory flags only).
+
+The agent layer is integrated through tool-use against the engine and structured data. It does not embed clinical thresholds in prompts or create treatment logic outside the schema.
+
+## Member application
+
+The member app is the patient-facing layer. Its job is to make preventive care understandable without overstating what the system knows. It may support account and subscription, intake, lab upload or ordering, results display (approved patient-visible states only), missing-data prompts, follow-up tasks, education, consent, and notifications.
+
+<Warning>
+  The member app must respect visibility controls from the engine. `AWAITING_REVIEW` and `REQUIRES_CLINICAL_CORRELATION` should not be shown as final conclusions. The patient can be told the clinician is reviewing the result, but not given a definitive automated interpretation.
+</Warning>
+
+## Operator application
+
+The operator app is the clinic-facing or operations-facing layer. It supports the people who manage patients, clinicians, workflows, and follow-up, showing the patient list, intake completeness, lab status, review queue, engine states, decision trace, treatment flags (advisory only), safety flags, message drafts, and audit history.
+
+The operator app should never become a workaround around the Medical Director lifecycle. It should make governance easier to follow, not easier to bypass.
+
+## Data and storage layer
+
+The data layer stores sensitive clinical and operational records: patient profile, biomarker data (raw and normalized), derived values, context inputs, sensitive calibration inputs (where consented), engine outputs, decision records, clinician decisions, audit logs, and consent records.
+
+Clinical data and decision records are sensitive data under Ley 1581, with HIPAA-aligned handling planned for expansion, alongside least-privilege access, segregation, audit logging, and separate consent for de-identified data used to improve calibrations. The storage design must support both privacy and traceability — the system should explain decisions without exposing sensitive data to unauthorized roles.
+
+## Integrations layer
+
+Consensus depends on external services for parts of the care workflow.
+
+{/* TODO: Vendor names, versions, regions, contracts, and data-handling terms are not final until engineering confirms them. */}
+
+| Dependency | Status |
+| --- | --- |
+| Evidence sources | Clinical guidelines and genomic/pharmacogenomic references listed in `REF_SOURCES` |
+| Lab partners | Biomarker processing partners — names to confirm |
+| Payment gateways | Examples include Wompi or Mercado Pago — vendors to confirm |
+| AI model providers | Provider and model versions to confirm |
+| Cloud hosting | Provider and infrastructure details to confirm |
+| Communications | Messaging, email, SMS, or operational vendors to confirm |
+
+This section remains cautious in the whitepaper. Vendor names, versions, regions, contracts, and data-handling terms should not be presented as final until engineering confirms them.
+
+### Evidence-source dependency
+
+The evidence library is a special dependency because it supports clinical interpretation. The engine references clinical guidelines and genomic or pharmacogenomic references through `REF_SOURCES` — 113 evidence sources in the reference layer. Evidence-source governance tracks the source ID, source type, clinical domain, rule linkage, evidence grade, review date, reviewer, status, and update trigger. A rule is only as defensible as the evidence and review process behind it.
+
+### Lab integration requirements
+
+Lab integrations are clinically sensitive because upstream data quality affects downstream interpretation. A lab integration defines biomarker mapping to canonical engine biomarkers, unit handling through the single source of truth, reference metadata (stored but not blindly treated as engine logic), specimen metadata, result provenance, error handling for missing/duplicated/impossible/conflicting values, reconciliation so updated results do not silently overwrite prior decisions, and auditability. The engine should not assume all lab inputs are clean; it validates and normalizes before interpretation.
+
+### Payment integration requirements
+
+Payment systems are not clinical systems, but they can affect patient access and operational workflow, so they are separated from clinical interpretation.
+
+<Warning>
+  The whitepaper should avoid implying that payment status changes medical eligibility. Clinical review and treatment decisions remain independent of payment logic.
+</Warning>
+
+Subscription billing should not affect clinical state interpretation; plan status may affect access to services but not medical conclusions; failed payment should not alter stored clinical data or decision traces; refunds and receipts are operational; payment metadata is kept separate from sensitive clinical records.
+
+### AI model provider requirements
+
+AI model providers are a high-scrutiny dependency because agents may process sensitive context. This is a completion requirement, not a marketing detail.
+
+{/* TODO: Confirm AI model provider details with engineering before external release. */}
+
+Before external release, engineering should confirm the provider name, model version, data handling, retention policy, training use, region, encryption (in transit and at rest), access control, change management, fallback behavior, and monitoring.
+
+## Open-source and third-party inventory
+
+Open-source and third-party components must be inventoried. Any OSS or third-party component incorporated into the engine or apps must be inventoried with its license and reconciled with the Engine IP Assignment, Exhibit A, so no license compromises the company's ownership or ability to commercialize.
+
+{/* TODO: Complete the OSS/third-party inventory with engineering. */}
+
+The inventory includes the component name, version, license, usage location, linkage type, data access, security status, replacement risk, IP impact, owner, and review date. This is especially important for investor diligence: a strong clinical engine can still create company risk if its dependency licensing is unclear.
+
+## Security posture
+
+The baseline security posture is least-privilege access, clinical data segregation, decision traces for audit, data protection under Colombian Ley 1581, HIPAA-aligned handling for US expansion, secrets management, and encryption in transit and at rest, with standards to confirm.
+
+The security architecture covers identity and access (role-based, least privilege, MFA where appropriate), clinical data segregation, encryption, secrets management, audit logging, data minimization, consent enforcement, vendor review, incident response, backup and recovery, environment separation, and monitoring.
+
+<Note>
+  Because the system handles clinical data, security is part of clinical safety. A breach, misrouting, or unauthorized access event can create patient harm even when the medical logic is correct.
+</Note>
+
+## Data protection and consent
+
+Data protection is tied to the kinds of data the engine uses.
+
+| Data category | Classification |
+| --- | --- |
+| Basic profile data | Protected personal data |
+| Lab values | Sensitive clinical data |
+| Medications | Sensitive clinical data |
+| Decision records | Sensitive clinical and audit data |
+| Genotype | Highly sensitive data |
+| Ancestry-related context | Sensitive data requiring explicit purpose limitation |
+| De-identified outcomes | Use only under separate consent and governance |
+| Payment data | Separated from clinical interpretation |
+| Agent logs | Redacted or protected depending on content |
+| Clinician notes | Protected clinical record |
+
+Ancestry and genotype data require express consent and heightened protection, and are used only for clinical calibration. Consent should not live only in legal text — the system enforces consent through data access, calibration eligibility, and audit logs.
+
+## Continuity and key-person risk
+
+Engineering knowledge should not be single-threaded. The engine schema, runtime, and deployment should be documented so the system survives any one person's departure. Continuity controls include architecture documentation, a schema dictionary, runtime documentation, a deployment runbook, an incident runbook, an access inventory, backup procedures, a dependency inventory, test suite documentation, clinical governance documentation, onboarding material, and administrative access continuity.
+
+This is a diligence requirement, not just operational maturity. A clinical infrastructure company must show its core system is maintainable beyond any single individual.
+
+## Environment separation
+
+The stack clearly separates environments. Clinical rules should not move from development to production without lifecycle approval, validation, and release gating.
+
+| Environment | Purpose | Data |
+| --- | --- | --- |
+| Development | Build features and test code | No real patient data unless explicitly controlled |
+| Staging | Test releases, validators, schemas, workflows | Synthetic or de-identified where possible |
+| Production | Serve real clinical workflows | Full security, access control, audit, monitoring |
+| Research or analytics | Improve calibrations and outcomes learning | De-identified and consent-governed only |
+
+## Deployment and release controls
+
+Technology deployment must align with clinical governance. A normal software release process is not enough; a clinical-engine release confirms both technical and medical readiness.
+
+<Check>
+  Schema version recorded, runtime version recorded, golden tests passed, boot validators passed, active clinical content reviewed, lifecycle status enforced, patient-facing templates resolved, security checks passed, dependency changes reviewed, rollback available, Medical Director release gate passed (for clinical content), and engineering sign-off recorded (for technical release).
+</Check>
+
+Activation is gated, and clinical content is not active until it passes review and relevant release gates. This links the deployment process to patient safety.
+
+## Observability and audit
+
+The stack makes system behavior visible. Decision traces support clinical audit; system observability supports operational audit. Both are needed.
+
+Observability includes engine evaluation volume, validator failures, rule firing frequency, suppression frequency, review-state frequency, treatment flag frequency, critical-state escalation, agent boundary violations, missing fact rates, lab normalization errors, clinician override rates, patient communication incidents, dependency failures, and access anomalies.

@@ -1,0 +1,203 @@
+---
+title: "AI agent architecture"
+description: "What agents do, what they cannot do, and how they stay grounded in the deterministic engine."
+keywords: ["AI agents", "coordinator", "tool-use", "grounding", "model-provider governance"]
+---
+
+Consensus Center is AI-native, but it is not AI-autonomous. The system uses AI agents to reduce operational friction around intake, coordination, communication, follow-up, and clinician support. The clinical core remains deterministic: interpretations come from reviewed rules, calibrations, evidence sources, lifecycle states, and clinician review, not from a generative model.
+
+<Info>
+  Generative AI supports the workflow. The deterministic engine supports interpretation. The licensed clinician makes the clinical decision. The part that must be correct and auditable is not left to a probabilistic model — "determinism first, generative second."
+</Info>
+
+## Why agents exist
+
+Preventive medicine creates operational complexity. A patient may need to complete intake, upload labs, confirm fasting status, report medications, clarify symptoms, schedule review, receive follow-up, repeat tests, and understand next steps. A clinician may need to review many inputs before deciding whether a result is meaningful.
+
+Agents help with intake, scheduling, record consolidation, missing-data detection, review preparation, follow-up, patient communication, and operator support. They reduce administrative load. They do not replace the clinical logic or the clinician.
+
+## The core architectural separation
+
+The system has three distinct layers, which prevents a common failure mode in clinical AI: allowing a fluent model response to become the medical decision.
+
+| Layer | Role | Clinical authority |
+| --- | --- | --- |
+| Deterministic engine | Evaluates structured facts through reviewed rules and calibrations | Decision support only |
+| AI agents | Orchestrate workflows and communicate around engine outputs | None |
+| Licensed clinician | Reviews the case, context, risks, and recommendations | Yes |
+
+The engine may produce a structured output. The agent may organize or explain it. The clinician decides what it means clinically.
+
+## Current and proposed agent roster
+
+The final whitepaper should clearly distinguish live agents from roadmap agents so nothing reads as operational if it is not yet live.
+
+{/* TODO: Confirm which agents beyond the Coordinator are live vs. roadmap with engineering. */}
+
+| Agent | Function | Clinical decision authority |
+| --- | --- | --- |
+| Coordinator | Intake, scheduling, follow-up, record consolidation, advisory candidacy flagging | None |
+| Interpretation Support | Surfaces calibrated engine outputs to clinicians (reads deterministic engine) | None |
+| Follow-up / Longitudinal | Tracks members over time and prompts re-testing | None |
+| Operations | Supports operator and member workflows | None |
+
+The Coordinator is the clearest live or near-live agent. It manages intake, scheduling, follow-up, record consolidation, and advisory flagging against treatment-eligibility rules. It is always transparent as an agent and never prescribes or decides.
+
+## The Coordinator agent
+
+The Coordinator is the orchestration agent. Its job is to move the patient journey forward without crossing into clinical decision-making: intake management, lab workflow, context collection (fasting status, pregnancy status, contraindication screen), scheduling, record consolidation, advisory flagging, and follow-up.
+
+<Warning>
+  The Coordinator does not diagnose, prescribe, approve treatment, override the engine, or override the clinician. In the GLP-1 workflow, it can help move the patient from intake to clinician review, but the final decision remains with a licensed clinician.
+</Warning>
+
+## What agents are and are not allowed to do
+
+<Columns cols={2}>
+  <Card title="Agents are allowed to" icon="circle-check">
+    Ask for missing intake facts, explain what information is still needed, summarize uploaded records, surface engine states to clinicians, route ambiguous cases to review, draft patient-facing next steps from approved language, remind patients about follow-up, and help operators manage workflow.
+  </Card>
+  <Card title="Agents are not allowed to" icon="circle-x">
+    Diagnose, prescribe, authorize treatment, override a physician, override deterministic engine logic, invent a biomarker pattern, apply unapproved calibrations, hide uncertainty, present themselves as human, or show clinician-only conclusions to patients.
+  </Card>
+</Columns>
+
+The key standard is grounding. The agent should use structured data, approved templates, or engine outputs. It should not invent a clinical conclusion.
+
+## Tool-use and grounding
+
+Agents operate through tool-use, not free clinical generation. An agent retrieves structured data, queries the engine, reads decision traces, identifies missing facts, or surfaces approved language. It does not create new medical logic from its own model output.
+
+| Agent statement | Grounded in |
+| --- | --- |
+| "This marker needs review" | Engine state or guardrail |
+| "Fasting status is missing" | Runtime fact catalog |
+| "Possible candidate, requires medical evaluation" | Treatment flag plus approved patient language |
+| "Clinician review required" | `AWAITING_REVIEW` or `REQUIRES_CLINICAL_CORRELATION` |
+| "This result may be affected by context" | Suppression, hardening, assay, or calibration rule |
+| "Here is why the rule fired" | Decision trace with rule, source, and calibration |
+
+## Agent interaction with review states
+
+Agents must respect engine review states.
+
+| State | Agent behavior |
+| --- | --- |
+| `OPTIMAL` | Explain result using approved language |
+| `NORMAL` | Explain normal status without over-reassurance |
+| `WATCH` | Explain monitoring or follow-up context |
+| `ACTION` | Recommend clinician review or next step |
+| `CRITICAL` | Escalate through urgent pathway |
+| `INSUFFICIENT_DATA` | Request the missing facts |
+| `AWAITING_REVIEW` | Route to clinician, do not explain as final |
+| `REQUIRES_CLINICAL_CORRELATION` | Route to clinician, do not resolve independently |
+| `NOT_APPLICABLE` | Do not present the rule as relevant |
+
+The agent's role is especially valuable when data is incomplete. Instead of producing a weak interpretation, it can ask for missing facts — for example, "We need your fasting status before this metabolic marker can be interpreted safely." That is agent value without clinical overreach.
+
+## Agent interaction with treatment flags
+
+Treatment workflows require strict boundaries. The GLP-1 flow shows the correct pattern: the engine evaluates fasting gates, candidacy rules, hardening checks, and advisory flag logic; if conditions are met, a clinician-required flag is raised. The patient does not see "eligible" — the language is "possible candidate, requires medical evaluation" — while the clinician sees the contributing rules and evidence trace.
+
+| Step | Agent role |
+| --- | --- |
+| Intake | Collect facts and history; no clinical conclusion |
+| Contraindication screen | Collect structured information; no clearance |
+| Candidacy flag | Run engine logic; advisory only |
+| Patient message | Use approved language; no "eligible" claim |
+| Clinician review | Prepare case summary; clinician decides |
+| Prescription | None; clinician authority only |
+| Monitoring | Prompt follow-up tasks; protocol-governed |
+
+## Agent interaction with calibrations
+
+Agents may surface calibration context, but they must not create or apply calibrations independently. They may ask for missing context (based on required runtime facts), explain why context may matter (approved language), surface the calibration trace to a clinician, and suggest confirmatory testing only if the engine or approved protocol supports it.
+
+Agents may not apply calibration from model judgment, infer ancestry or genotype from appearance, or override genotype or clinician input. Sensitive context remains governed by the calibration layer and Medical Director review.
+
+## Agent memory and longitudinal follow-up
+
+A preventive system depends on time. Agents can help track repeat testing, missing labs, trend review, medication follow-up, lifestyle follow-up, safety monitoring, and retesting after suppression resolves. The Follow-up / Longitudinal agent should not interpret trends freely; it surfaces deterministic engine outputs, missing facts, or protocol-defined follow-up needs.
+
+## Transparency
+
+<Columns cols={2}>
+  <Card title="Patient-facing" icon="user">
+    Patients should know when they are interacting with an agent rather than a human clinician. Safe: "I'm the Consensus Coordinator. I help collect information, organize your next steps, and prepare your case for clinical review." Unsafe: "I'm your doctor."
+  </Card>
+  <Card title="Clinician-facing" icon="stethoscope">
+    When an agent summarizes a case, the clinician should see source documents, engine outputs, decision IDs, missing facts, calibrations, safety flags, treatment flags, completeness, and a clear distinction between agent-generated text and source data.
+  </Card>
+</Columns>
+
+## Model-provider governance
+
+Model-provider governance is still a completion item and should be finalized with engineering before the final whitepaper is shared externally.
+
+{/* TODO: Finalize model-provider governance with engineering. This is a required completion area, not a finished claim. */}
+
+<Warning>
+  This is a required completion area, not a finished implementation claim.
+</Warning>
+
+The final governance model should include the model provider (name, version, deployment region, contract status), model versioning, change management before switching models, data handling, PHI protection, logging of agent actions and tool calls, pre-deployment evaluation, human sampling of outputs, low-confidence escalation to human review, and incident response to disable or constrain agent behavior.
+
+## Monitoring of agent outputs
+
+Agent monitoring focuses on safety, accuracy, and boundary preservation — not only whether the agent is helpful, but whether it stays inside its clinical boundaries.
+
+| Metric | Detects |
+| --- | --- |
+| Unsupported clinical claims | Agent invented a conclusion |
+| Patient-facing overstatement | Diagnostic or eligibility language used incorrectly |
+| Review-state leakage | Clinician-only state shown as final patient explanation |
+| Missing fact handling | Agent failed to ask for required information |
+| Treatment boundary violation | Agent implied authorization or prescription |
+| Calibration misuse | Agent inferred sensitive context incorrectly |
+| Source grounding rate | Output tied to engine trace or approved template |
+| Escalation rate | Ambiguous cases routed appropriately |
+| Clinician correction rate | Physicians had to correct agent summaries |
+| Patient confusion reports | Communication was unclear or alarming |
+
+### Human-review sampling
+
+Even if agents are constrained, outputs should be sampled. Sampling prioritizes treatment-related messages, calibration-related explanations, `ACTION`/`CRITICAL` communications, and complex-case clinician summaries (high); `WATCH` explanations (medium); and normal/optimal explanations and administrative reminders (lower). This helps identify drift, unclear language, or repeated failure modes before they become systemic.
+
+### Agent failure modes
+
+A mature AI architecture does not claim agents never fail. It defines how failures are prevented, detected, and corrected.
+
+| Failure mode | Control |
+| --- | --- |
+| Hallucinated clinical explanation | Tool grounding and template constraints |
+| Overconfident patient language | Approved message library and monitoring |
+| Wrong escalation pathway | Review-state routing tests |
+| Missing contraindication screen | Structured intake checklist |
+| Misread uploaded record | Clinician source visibility |
+| Unapproved clinical suggestion | Scope restriction |
+| Privacy overexposure | Data minimization and access controls |
+| Model behavior change | Version governance and regression tests |
+| Confusing agent identity | Transparent agent disclosure |
+| Repeated operator workaround | Workflow audit and training |
+
+## AI agents in the broader stack
+
+The system is AI-native and configuration-driven: a structured clinical-knowledge schema, deterministic runtime, AI agents, member and operator applications, and integrations for labs, payments, and communications. Clinical logic lives in the reviewed schema, not scattered in application code. Agents are one layer of the system, not the system itself.
+
+| Layer | Role |
+| --- | --- |
+| Engine schema | Defines clinical logic agents must respect |
+| Runtime | Produces traceable outputs agents can use |
+| Member app | Presents approved patient-facing workflows |
+| Operator app | Helps clinics manage patient workflows |
+| Data storage | Stores clinical data and decision traces |
+| Integrations | Connect labs, payments, and communications |
+| AI agents | Coordinate tasks across the system |
+
+The agent layer is powerful because it connects workflows. It is safe because it is constrained by the engine.
+
+## Why this is defensible
+
+The defensibility of the AI architecture comes from separation of roles. A model-driven medical product asks the AI to interpret. Consensus asks the deterministic engine to interpret, the AI agent to coordinate, and the clinician to decide.
+
+This architecture combines AI-native efficiency with deterministic, auditable clinical decisions. A design where AI never makes the clinical call is safer and easier to defend than a model-driven approach. Consensus Center is not betting clinical safety on prompt engineering. It is building a governed clinical infrastructure layer where AI is useful precisely because it is bounded.

@@ -1,0 +1,211 @@
+---
+title: "Validation strategy"
+description: "Golden test cases, boot validators, clinical review, and outcomes monitoring."
+keywords: ["validation", "golden test cases", "boot validators", "regression testing", "outcomes monitoring"]
+---
+
+Consensus Engine is deterministic, which makes it testable. For a defined patient fact set, the expected output should be known in advance. The engine should not behave differently each time it runs, and it should not depend on a generative model's interpretation of the case. It evaluates structured facts against reviewed rules and produces a reproducible result. Validation is the process that proves the engine is doing that safely.
+
+## Validation philosophy
+
+The validation strategy is built around four layers:
+
+<Steps>
+  <Step title="Golden test cases">
+    Confirm that known inputs produce expected clinical states.
+  </Step>
+  <Step title="Boot-time validators">
+    Confirm that the engine is internally coherent before serving.
+  </Step>
+  <Step title="Medical Director review">
+    Confirm that clinical logic is medically appropriate.
+  </Step>
+  <Step title="Outcomes monitoring">
+    Confirm real-world performance after deployment.
+  </Step>
+</Steps>
+
+Clinical safety cannot depend on trust in the product team alone. It must be demonstrated through repeatable tests.
+
+## What validation must prove
+
+Validation should prove more than "the software runs."
+
+| Question | Validation method |
+| --- | --- |
+| Are rules firing correctly? | Golden test cases |
+| Are unsafe rules blocked? | Lifecycle validators |
+| Are missing facts detected? | Runtime fact coverage tests |
+| Are units handled consistently? | Unit conversion validation |
+| Are patient messages resolvable? | Template resolver validation |
+| Are calibrations applied only when appropriate? | Calibration-specific test cases |
+| Are suppressions working? | Pregnancy, illness, exercise, assay, and fasting tests |
+| Are hardening rules preventing over-diagnosis? | Clinical-hardening test cases |
+| Are treatment flags clinician-required? | Treatment workflow tests |
+| Is every output traceable? | Runtime output validation |
+| Are active rules medically reviewed? | Medical Director sign-off |
+| Can a decision be reproduced later? | Version and decision trace tests |
+
+A clinical engine should not only be correct in common cases. It must also be safe in edge cases.
+
+## Golden test cases
+
+Golden test cases are predefined patient scenarios with expected outputs. Each includes a test case ID, patient profile, biomarker inputs, context inputs, expected derived values, expected rule behavior, expected calibration behavior, expected suppression behavior, expected state, expected visibility, expected evidence trace, and a pass/fail result.
+
+Representative cases include a healthy baseline expected to produce `OPTIMAL` behavior, a severe hyperkalemia case expected to escalate to `CRITICAL`, and a TSH case affected by high-dose biotin expected to route to `REQUIRES_CLINICAL_CORRELATION`.
+
+### Test case categories
+
+The golden test suite should cover the full clinical surface of the engine. The goal is to test not only expected positives, but also expected blocks. A rule that correctly does not fire is as important as a rule that does.
+
+| Category | Coverage |
+| --- | --- |
+| Normal baseline | Healthy patient with all biomarkers in expected ranges |
+| Optimal preventive state | Values better than standard range but clinically safe |
+| `WATCH` state | In-range marker with concerning trend or preventive relevance |
+| `ACTION` state | Out-of-range marker requiring clinical attention |
+| `CRITICAL` state | Severe abnormality requiring urgent escalation |
+| Insufficient data | Missing fasting status, missing required lab, incomplete intake |
+| Suppression | Pregnancy, acute illness, recent strenuous exercise |
+| Assay interference | High-dose biotin affecting thyroid interpretation |
+| Medication confounding | Medication or supplement affecting biomarker meaning |
+| Calibration | Duffy-null, APOL1, hemoglobinopathy, vitamin D context |
+| Longitudinal logic | Chronicity, trend direction, persistence over time |
+| Pattern detection | Multi-biomarker metabolic, renal, hepatic, or inflammatory pattern |
+| Treatment flagging | GLP-1 advisory flag requiring clinician review |
+| Visibility control | Clinician-only states not shown as final patient conclusions |
+| Lifecycle control | Draft or unapproved rule blocked from runtime |
+
+### Example golden test structure
+
+| Field | Value |
+| --- | --- |
+| Test ID | `TC_METABOLIC_FASTING_MISSING_001` |
+| Scenario | Patient has glucose and insulin values, but fasting status is unknown |
+| Inputs | Glucose present, insulin present, fasting status missing |
+| Expected derived behavior | HOMA-IR should not be interpreted as fasting-confirmed |
+| Expected guardrail | Fasting gate activates |
+| Expected state | `INSUFFICIENT_DATA` or `AWAITING_REVIEW` depending on rule design |
+| Patient visibility | Explain that fasting status is needed |
+| Clinician visibility | Show missing fact and blocked interpretation |
+| Pass condition | Engine does not produce a confident metabolic conclusion |
+
+## Calibration-specific validation
+
+Calibrations require dedicated tests because they change interpretation based on context. Each calibration should have at least four types of tests: it applies correctly when required facts are present, does not over-apply when facts are absent, handles uncertainty by routing suggestive or conflicting data to review, and leaves a trace showing calibration ID, version, evidence, and rationale.
+
+For example, a Duffy-null/ACKR1 low neutrophil value should not be mislabeled without context; APOL1 kidney-risk calibration should require confirmed or appropriately governed genotype context; HbA1c interpretation should be limited or routed when reliability is uncertain; and vitamin D context calibration should apply only under approved context and evidence logic.
+
+## Suppression and hardening validation
+
+Suppression and hardening rules are safety-critical. They prevent the system from converting unreliable or incomplete data into overconfident conclusions. Validation should confirm pregnancy suppression, acute illness suppression, recent exercise suppression, the fasting gate, diabetes hardening, CKD hardening, and assay confounding routing.
+
+<Warning>
+  These tests should be treated as release blockers. If they fail, the system should not expose affected outputs to patients.
+</Warning>
+
+## Boot-time validators
+
+Boot-time validators run before the engine serves output, catching internal misconfiguration early. This prevents a technically valid but clinically unsafe engine state from reaching patients.
+
+| Validator | Risk if absent |
+| --- | --- |
+| Operator registry coverage | Rule fails silently or behaves unpredictably |
+| Runtime facts coverage | Rule depends on unavailable input |
+| Template resolver coverage | Broken or unsafe communication |
+| Unit single source of truth | Incorrect interpretation from unit mismatch |
+| Lifecycle enforcement | Draft or unapproved clinical logic reaches patients |
+
+Boot validators are not optional technical polish. They are part of the medical safety system.
+
+## Runtime output validation
+
+Every evaluation should produce a complete runtime output record — the unit of auditability. Runtime output validation confirms a unique decision ID, patient and organization reference, input facts listed, rules fired listed, a calibration trace when applicable, an attached evidence source, captured lifecycle status, captured state, captured visibility, and stored version context.
+
+A decision without a trace should be treated as incomplete.
+
+## Medical Director review
+
+Automated testing can confirm that logic behaves as expected. It cannot confirm that the logic is clinically appropriate — that requires medical review. The Medical Director reviews clinical correctness, evidence basis, preventive posture, safety posture, calibration logic, review routing, treatment boundaries, patient language, and release readiness.
+
+## Validation status reporting
+
+Validation status should be reported carefully.
+
+<Warning>
+  Result fields must be filled with real validation outcomes. Projected targets must not be presented as observed results. This language protects credibility: investors, partners, clinicians, and regulators can distinguish between system design and completed validation evidence.
+</Warning>
+
+{/* TODO: Fill these fields with real validation outcomes before publishing. They are targets, not achieved results. */}
+
+| Field | Target (to be filled with real results) |
+| --- | --- |
+| Golden test cases defined | Full coverage of categories |
+| Test cases executed end-to-end | 100% |
+| Pass rate | 100% before activation |
+| Open clinical-safety issues | 0 before activation |
+| Calibrations MD-reviewed | All active ones |
+
+## Release gating
+
+Validation connects directly to release. A rule, calibration, pattern, or treatment flag should not become `ACTIVE` until the relevant review and validation gates are complete: evidence source attached, Medical Director review approved, golden tests passing, boot validators passing, runtime trace complete, visibility review complete, patient message approved, safety interactions reviewed, treatment boundary confirmed where applicable, version record created, rollback path available, and no open safety blockers.
+
+This is the safety guarantee: patient exposure is controlled by the system, not by informal judgment.
+
+## Outcomes monitoring
+
+Validation does not end at release. Once live, outcomes monitoring evaluates whether rules and calibrations behave as expected in real-world use.
+
+| Question | Measures |
+| --- | --- |
+| Did `WATCH` states predict meaningful follow-up findings? | Preventive value |
+| Did `ACTION` states create appropriate clinical review? | Clinical relevance |
+| Did suppressions prevent misleading outputs? | Safety value |
+| Did hardening rules prevent overdiagnosis? | Conservative posture |
+| Did calibrations reduce misclassification? | Scientific value |
+| Did treatment flags lead to appropriate clinician decisions? | Workflow quality |
+| Did patient-facing language reduce confusion? | Communication safety |
+| Did any rule create excessive alerts? | Clinician burden |
+| Did any patient group receive worse performance? | Equity and calibration quality |
+
+Accumulated decision records, inputs, calibrations, and outcomes form a longitudinal dataset that can refine calibrations over time — but only under consent, privacy, and medical governance.
+
+## Regression testing
+
+Every schema change should trigger regression testing, because changes can have indirect effects: a new unit conversion can affect multiple markers, a calibration can change a downstream pattern, a safety suppression can prevent a treatment flag, and a wording change can alter patient interpretation.
+
+Regression testing should run after a new biomarker, threshold update, calibration update, pattern update, safety rule update, formula update, runtime fact update, patient message update, lifecycle transition, or AI workflow update. A deterministic engine makes regression testing practical: the same input should produce the same expected output unless an approved change intentionally modifies behavior.
+
+## Failure handling
+
+Validation should define what happens when something fails. A validation framework that only reports problems but does not block unsafe release is incomplete.
+
+| Failure | Action |
+| --- | --- |
+| Golden test fails | Block release and review rule logic |
+| Boot validator fails | Engine should not serve affected outputs |
+| Missing evidence source | Block activation |
+| Lifecycle mismatch | Block runtime use |
+| Template missing | Block or fall back to approved safe message |
+| Calibration over-applies | Restrict applies-when logic and re-test |
+| Suppression fails | Treat as clinical safety blocker |
+| Patient-visible review state appears | Block release and correct visibility control |
+| Treatment flag appears as authorization | Block release and revise language or workflow |
+| Critical state does not escalate | Treat as urgent safety issue |
+
+## Documentation requirements
+
+Each validation cycle should create a record including the schema version, test suite version, execution date, test environment, test results (pass, fail, skipped, or blocked), open issues, medical reviewer, engineering reviewer, release decision, and notes. This supports due diligence, internal governance, and later regulatory review.
+
+## Validation maturity model
+
+The validation program can mature in phases. Not every layer has to be mature on day one, but the roadmap and current status must be clear.
+
+| Phase | Scope |
+| --- | --- |
+| 1 | Core golden test cases for major states and safety rules |
+| 2 | Full regression suite across biomarkers, patterns, calibrations, and treatment flags |
+| 3 | Automated CI execution for every schema change |
+| 4 | Outcomes monitoring linked to decision traces |
+| 5 | Continuous calibration improvement under Medical Director governance |
+| 6 | External clinical validation or partner-reviewed validation studies |

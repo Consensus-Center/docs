@@ -1,0 +1,181 @@
+---
+title: "Engine schema"
+description: "67 tables organized into clinical, safety, runtime, and governance layers."
+keywords: ["engine schema", "clinical knowledge", "lifecycle governance", "boot validators", "calibrations"]
+---
+
+The Consensus Engine is built as a structured clinical-knowledge schema. This is one of the most important architectural choices in the system.
+
+Instead of placing clinical logic directly inside application code, the engine separates clinical knowledge into reviewed tables. The runtime then reads those tables deterministically. This makes the system easier to inspect, validate, update, govern, and audit. The current v2.8.4 schema spans 67 tables covering biomarkers, thresholds, status rules, trends, patterns, treatment eligibility, calibrations, formulas, evidence sources, runtime outputs, safety, and lifecycle governance.
+
+## Why the schema matters
+
+A preventive health system needs to change over time. New biomarkers may be added, medical guidance may evolve, a calibration may be updated, a threshold may need review, a treatment rule may need to be deprecated, or a safety rule may need to become stricter.
+
+If clinical logic is hidden inside application code, every change becomes harder to review and harder to explain. It also increases the risk that different parts of the product apply different logic. Consensus avoids this by treating the clinical engine as a governed knowledge system.
+
+The schema is the single source of truth for biomarker identity, interpretation, trends, formulas, calibration, patterns, treatment flags, safety, runtime output format, and governance lifecycle. This gives the company one controlled place to review clinical logic.
+
+## Schema layer map
+
+The schema can be understood as nine major layers.
+
+| Layer | Representative tables | Purpose |
+| --- | --- | --- |
+| Reference data | `BIOMARKERS`, `REF_SOURCES`, `UNITS_CONVERSION` | Canonical biomarkers, evidence sources, unit conversion rules |
+| Interpretation | `STATUS_RULES`, `TRENDS_RULES`, `RANGE_*` | Converts biomarker values and trends into structured states |
+| Derived computation | `DERIVED_BIOMARKERS`, `FORMULA_*` | Calculates derived indices such as eGFR, HOMA-IR, anion gap |
+| Calibration | `CALIBRATIONS` | Applies documented context-aware adjustments before interpretation |
+| Patterns | `PATTERNS` | Evaluates multi-biomarker logic using anchors, supporting markers, exclusions |
+| Treatments | `TREATMENTS`, `TREATMENT_*`, `PROTOCOL_*` | Links clinical signals to clinician-required eligibility or protocol review |
+| Safety | `SAFETY_*`, `CLINICAL_HARDENING_*`, `CONFLICT_*` | Prevents unsafe interpretation through suppressions, hardening, conflict handling |
+| Runtime | `RUNTIME_OUTPUT_SCHEMA`, `RUNTIME_FACTS_CATALOG`, `RUNTIME_VALIDATORS` | Defines input facts, output contracts, boot-time validation |
+| Governance | `LIFECYCLE_*`, `MD_SIGNOFF_*`, `RELEASE_*` | Controls review, approval, activation, deprecation, release gates |
+
+## Reference data layer
+
+The reference layer defines the basic clinical language of the engine. It answers questions such as: what is the canonical name of this biomarker, what aliases can appear from different labs, what unit should be used internally, what evidence source supports a rule, and which sources are accepted in the evidence library.
+
+The evidence library contains 113 referenced sources, including clinical guidelines and genomic or pharmacogenomic references. This layer is preventive because it reduces silent errors. A value should not be interpreted differently because one lab uses a different label, unit, or reporting convention.
+
+## Interpretation layer
+
+The interpretation layer converts biomarker values into structured states. It does not simply mark results as "normal" or "abnormal." It supports a more preventive clinical vocabulary: favorable or normal, early signal, actionable concern, critical concern, insufficient or ambiguous, and clinician-only review.
+
+This is where the engine translates data into meaning, and where it must be careful. A preventive signal is not automatically a diagnosis, and an out-of-range biomarker is not always a stable disease state. The interpretation layer works together with hardening, suppression, and review-routing logic.
+
+## Derived computation layer
+
+Some clinical signals are calculated rather than directly measured. The derived computation layer handles these formulas in a structured way:
+
+| Derived index | Inputs |
+| --- | --- |
+| BMI | Height and weight |
+| HOMA-IR | Glucose and insulin |
+| eGFR | Creatinine, age, biological sex, equation-specific inputs |
+| Anion gap | Electrolyte values |
+| FIB-4 and other derived risk flags | Multiple lab values and clinical context |
+
+Derived formulas are not hidden in application code. They are part of the governed clinical schema, which means they can be reviewed, tested, versioned, and audited.
+
+## Calibration layer
+
+The calibration layer adjusts interpretation when defined biological or contextual conditions change what a biomarker means. A calibration is not a vague personalization feature. It is a structured rule with a defined shape:
+
+- **Biomarker** — identifies what is being calibrated.
+- **Applies-when condition** — defines when the calibration is allowed to apply.
+- **Machine-readable logic** — allows deterministic evaluation.
+- **Human-readable rationale** — allows clinician review.
+- **Evidence level** — shows the strength of support.
+- **Version and provenance** — makes historical reproduction possible.
+- **Review status** — controls whether the calibration can be used.
+
+The current schema includes 12 calibrations and growing, each evidence-linked and lifecycle-governed. This layer is central to the scientific moat of Consensus Center: the system is not only reading biomarkers, it is asking whether the standard interpretation is appropriate for this patient.
+
+## Pattern layer
+
+The pattern layer evaluates combinations of biomarkers, because many preventive signals are not visible in one value. They emerge through relationships:
+
+| Pattern | Contributing markers |
+| --- | --- |
+| Metabolic dysfunction | Glucose, HbA1c, insulin, HOMA-IR, triglycerides, HDL, BMI, waist |
+| Liver stress | ALT, AST, GGT, platelets, BMI, alcohol context, medication context |
+| Iron pattern | Ferritin, iron, transferrin saturation, inflammation context |
+| Kidney risk | Creatinine, eGFR, prior trend, APOL1 status, albuminuria where available |
+| Inflammation pattern | hs-CRP, ferritin, WBC, symptoms, recent illness context |
+
+The pattern layer remains deterministic. A pattern exists because it has been encoded, reviewed, and governed. It is not invented by a generative model during runtime. A clinician can review the anchors, exclusions, supporting markers, and rule logic that produced the pattern.
+
+## Treatment and protocol linkage layer
+
+The treatment layer does not prescribe. It creates structured clinician-required flags.
+
+In the GLP-1 flow, the engine may evaluate fasting status, BMI, glucose, HbA1c, HOMA-IR, insulin state, a contraindication screen, and over-diagnosis hardening rules. If conditions are met, the system raises an advisory flag for clinician review. It does not tell the patient they are "eligible," and it does not authorize treatment.
+
+<Warning>
+  Patient-facing language stays cautious, such as "Possible candidate. Requires medical evaluation." The clinician sees the full rule trace, contributing values, safety context, and evidence basis.
+</Warning>
+
+This layer supports scalable preventive workflows without crossing into automated medical decision-making.
+
+## Safety layer
+
+The safety layer is where the system prevents over-interpretation. It includes suppression rules (hide or delay interpretation when context makes a result unreliable), clinical hardening (require confirmation before stronger assertions), conflict rules (detect contradictions or incompatible signals), review states (route ambiguity or high-stakes findings to clinicians), and contraindication logic (prevent treatment flags from advancing without safety review).
+
+Examples include pregnancy suppression, recent acute illness suppression, recent strenuous exercise suppression, diabetes hardening, CKD chronicity, and fasting gates. This layer gives the engine a preventive posture: it can detect earlier signals, but it cannot freely overstate them.
+
+## Runtime layer
+
+The runtime layer defines how the engine receives facts and how it emits decisions. The runtime output is a structured decision record with a unique `decision_id`, organization and patient references, inputs considered, rules fired, calibrations applied, resulting state, and cited evidence. It also defines the input contract through runtime facts: profile fields, derived values, biomarker states, derived flags, specimen quality facts, and longitudinal data.
+
+A simplified runtime contract:
+
+<Steps>
+  <Step title="Input facts">
+    The validated facts available for evaluation.
+  </Step>
+  <Step title="Rule evaluation">
+    The deterministic logic applied to those facts.
+  </Step>
+  <Step title="Calibration trace">
+    The context-aware adjustment applied, if any.
+  </Step>
+  <Step title="Evidence trace">
+    The source supporting the interpretation.
+  </Step>
+  <Step title="Output state">
+    The resulting clinical state.
+  </Step>
+  <Step title="Review routing">
+    Whether the output can be patient-visible or requires clinician review.
+  </Step>
+  <Step title="Decision record">
+    The audit unit for future review.
+  </Step>
+</Steps>
+
+This makes the engine reproducible. A decision made months earlier can be reconstructed with the rules, calibrations, sources, and lifecycle states active at that time.
+
+## Governance layer
+
+The governance layer controls whether clinical content can run. Clinical content moves through a formal lifecycle:
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+This lifecycle operates under Medical Director authority, with sign-off queues and release gates controlling what is eligible to go live. Rules do not run unless their lifecycle state permits it, enforced by a boot validator.
+
+<Note>
+  In this architecture, existence is not activation. A rule can be drafted, reviewed, approved, deprecated, or retired — but only properly gated clinical content should affect patient-facing interpretation.
+</Note>
+
+## Boot-time validators
+
+Before serving, the engine runs integrity validators that check the system is internally coherent before any patient is exposed to output:
+
+| Validator | What it catches |
+| --- | --- |
+| Operator registry coverage | A rule references an unknown logical operator |
+| Runtime facts coverage | A rule references a fact that does not exist in the input catalog |
+| Template resolver coverage | A message references a missing template |
+| Unit single source of truth | Conflicting unit conversions or duplicated conversion logic |
+| Lifecycle enforcement | Draft or unapproved rules running in production |
+
+These boot-time validators prevent silent misconfiguration from reaching a patient. They are part of the validation stack alongside golden test cases, Medical Director review, and outcomes monitoring.
+
+## The key architectural principle
+
+The engine schema is not just a database design. It is a safety design. The schema allows Consensus Center to answer the questions that matter in clinical AI:
+
+| Question | Answered by |
+| --- | --- |
+| Why did the system produce this interpretation? | Rule trace and evidence trace |
+| Was context considered? | Calibration and runtime facts |
+| Was the result safe to show to a patient? | Visibility state and review routing |
+| Was the rule approved? | Lifecycle status and release gate |
+| Can the decision be reproduced later? | Versioned rules, calibrations, and decision record |
+| Can the system be tested? | Deterministic rules and golden test cases |
+| Can the system evolve safely? | Governance, deprecation, and release controls |
+
+The schema is the foundation that makes preventive interpretation scalable without becoming uncontrolled automation.

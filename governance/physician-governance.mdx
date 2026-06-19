@@ -1,0 +1,219 @@
+---
+title: "Physician-in-the-loop governance"
+description: "Medical Director review, lifecycle controls, and release gates."
+keywords: ["physician governance", "medical director", "lifecycle", "release gates", "sign-off queue"]
+---
+
+Consensus Engine is physician-governed by design. The system can organize data, apply deterministic rules, surface early signals, and route cases for review, but clinical responsibility remains with licensed clinicians.
+
+This governance layer prevents the engine from becoming autonomous medical automation. The goal is not simply to have a doctor available — it is to build medical oversight into the lifecycle of every clinical rule, calibration, safety control, treatment flag, and patient-facing output. AI supports, the engine evaluates deterministically, and a licensed clinician decides.
+
+## Governance principle
+
+<Info>
+  No clinical content should affect a patient unless it has passed review, validation, release control, and physician-governed activation.
+</Info>
+
+This applies to biomarker thresholds, status rules, trend rules, multi-biomarker patterns, calibrations, safety suppressions, hardening rules, treatment candidacy flags, patient-facing language, and AI-agent behavior in clinical pathways. The system can detect signals early, but it cannot skip clinical governance.
+
+## The role of the Medical Director
+
+The Medical Director is the clinical authority over the engine's medical logic. The role is not to manually interpret every raw data transformation, but to govern the clinical rules that determine how interpretation happens:
+
+- **Rule review** — confirm that clinical logic is medically appropriate.
+- **Calibration review** — confirm evidence, applies-when logic, and safety posture.
+- **Safety review** — validate suppressions, hardening rules, and escalation pathways.
+- **Evidence review** — confirm that sources are suitable for the interpretation.
+- **Patient-language review** — prevent overstatement or diagnostic language.
+- **Release approval** — decide which clinical content is eligible to go live.
+- **Deprecation** — retire or replace outdated clinical logic.
+- **Incident review** — reassess rules if a safety concern emerges.
+- **Outcomes learning** — use reviewed outcomes to improve future rules.
+
+Clinical content moves through a formal lifecycle under the Medical Director's authority, with sign-off queues and release gates governing what becomes eligible to go live.
+
+## Licensed clinician decision-making
+
+The engine supports clinical review, but it does not make final medical decisions. In patient care workflows, licensed clinicians review the relevant intake, calibrated labs, rule output, safety context, and decision trace. Treatment eligibility logic produces clinician-required flags, not authorizations.
+
+| Engine output | Boundary |
+| --- | --- |
+| `WATCH` | Early signal, monitor or review |
+| `ACTION` | Clinical attention may be needed |
+| `CRITICAL` | Urgent clinical attention required |
+| `AWAITING_REVIEW` | Clinician interpretation required |
+| `REQUIRES_CLINICAL_CORRELATION` | Clinician must correlate with context |
+| Treatment candidacy flag | Possible candidate, requires medical evaluation |
+| Prescription | Licensed clinician decision only |
+| Diagnosis | Licensed clinician decision only |
+
+This preserves a clear boundary between decision support and medical practice.
+
+## Operator physician versus clinical responsibility
+
+The system may involve operator physicians or community-facing clinical guides, especially in partner or operator settings. Clinical responsibility sits with Consensus Center's licensed clinical team under its habilitación, while the operator physician is the community-facing guide.
+
+| Role | Responsibility |
+| --- | --- |
+| Consensus clinical team | Holds clinical responsibility under the operating habilitación |
+| Medical Director | Governs clinical content, rules, calibrations, and release readiness |
+| Licensed reviewing clinician | Reviews individual cases and makes clinical decisions |
+| Operator physician | Guides the community or clinic-facing experience |
+| AI Coordinator | Manages orchestration, intake, follow-up, and advisory flagging |
+| Engine runtime | Applies deterministic reviewed logic |
+
+The product should never blur these roles. Clear role separation is part of clinical safety.
+
+## Clinical lifecycle
+
+Clinical content moves through a controlled lifecycle. Runtime behavior depends on it.
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+| State | Behavior |
+| --- | --- |
+| `DRAFT` | Being designed; not allowed to affect patient output |
+| `READY_FOR_MD_REVIEW` | Ready for clinical review; not patient-facing |
+| `MD_APPROVED` | Clinically approved; eligible for release gating |
+| `ACTIVE` | Released for runtime use; can run if all validators pass |
+| `DEPRECATED` | Still known, but being replaced; limited or transitional use |
+| `RETIRED` | No longer valid; blocked |
+
+Rules do not run unless their lifecycle state permits it, enforced by a boot validator.
+
+<Note>
+  Existence in the schema is not the same as permission to run.
+</Note>
+
+## Why lifecycle control matters
+
+Without lifecycle control, a clinical engine can fail silently: a draft threshold might reach patients, a calibration might apply before evidence review, a pattern might activate before safety testing, a treatment flag might surface before clinician approval, or a deprecated rule might continue to influence decisions.
+
+| Failure mode | Lifecycle protection |
+| --- | --- |
+| Draft rule accidentally used | Runtime blocks non-active content |
+| Unreviewed calibration applied | Medical Director approval required |
+| Outdated rule persists | Deprecation and retirement states |
+| Clinical change bypasses review | Lifecycle transition required |
+| Release happens without testing | Release gate blocks activation |
+| Rule lacks evidence | Evidence review required before approval |
+
+This makes governance technical, not informal.
+
+## Medical sign-off queue
+
+A physician-governed engine needs a structured sign-off process. The queue lets the Medical Director and reviewing clinicians see exactly what needs review, why it matters, and what decision is required. It includes the item ID, item type, clinical domain, current lifecycle state, proposed change, evidence source, evidence grade, safety impact, patient visibility, required clinician action (approve, revise, reject, defer, or request more evidence), reviewer, timestamp, and release dependency.
+
+This avoids vague review. The clinician is not simply asked to "approve the engine." The clinician reviews defined clinical objects.
+
+## Release gates
+
+Approval and release are related but not identical. A rule can be medically approved and still not be ready for production. Release gates ensure clinical approval, technical validation, and safety checks all pass before patient exposure.
+
+{/* TODO: Validation results must be filled with real outcomes and never presented as achieved targets. */}
+
+A release gate requires:
+
+- Medical Director approval recorded
+- Evidence trace attached and reviewable
+- Runtime fact coverage — all referenced facts exist
+- Operator coverage — all JSON operators registered
+- Unit validation from a single source of truth
+- Message validation — patient-facing templates resolve correctly
+- Golden test coverage — expected outputs pass representative cases
+- Safety review — suppression and hardening interactions checked
+- Visibility review — patient-facing output is safe
+- Version record — rule and calibration versions recorded
+- Rollback plan — prior version can be restored or the rule disabled
+
+This ensures that activation is a controlled event.
+
+## Boot-time enforcement
+
+The engine runs boot-time validators before serving, checking internal integrity before any patient can receive output:
+
+| Validator | Check |
+| --- | --- |
+| Operator registry coverage | Every logical operator referenced by a rule exists |
+| Runtime facts coverage | Every fact referenced by a rule is defined |
+| Template resolver coverage | Every message template resolves |
+| Unit single source of truth | Conversions come from the canonical table |
+| Lifecycle status enforcement | Only permitted lifecycle states can run |
+
+Governance should not depend only on people remembering the process. The runtime enforces it.
+
+## Governance of calibrations
+
+Calibrations require special governance because they can alter interpretation based on sensitive context. A calibration requires a defined mechanism, applies-when logic, an evidence grade, Medical Director review, patient-visibility control, versioning, a runtime trace, monitoring, and a deprecation path. This prevents calibration from becoming an unreviewed personalization layer.
+
+## Governance of treatment flags
+
+Treatment-related logic requires an even stricter boundary. The engine may identify a possible candidate for a clinical intervention, but it must not authorize the intervention. For GLP-1 care, the Coordinator agent can collect intake facts, consolidate records, and run advisory candidacy flagging; if conditions are met, the engine raises a clinician-required flag.
+
+Treatment governance enforces no automatic eligibility language, no prescription by agent, a collected and reviewed contraindication screen, hardening rules applied before flagging, clinician-required review of all treatment flags, protocol linkage for prescribing, and a decision trace recording rule, source, calibration, and clinician decision. The patient journey can be efficient without becoming automated prescribing.
+
+## Governance of AI agents
+
+AI agents are governed differently from clinical rules, but they remain constrained by them. Clinical logic changes go through the Medical Director lifecycle, not through model updates, and agent behavior in clinical pathways is constrained by engine rules and review states. A model update should not change clinical meaning.
+
+| Risk | Control |
+| --- | --- |
+| Model update changes wording | Approved templates and monitoring |
+| Agent invents interpretation | Agent must ground output in engine trace |
+| Agent overstates candidacy | Language boundary and clinician-required flags |
+| Agent handles ambiguity incorrectly | Review states route to clinician |
+| Agent appears human | Transparency as agent required |
+| Agent operates outside scope | Tool-use restrictions and workflow constraints |
+
+The model can help explain and organize. It cannot redefine clinical logic.
+
+## Governance of patient-facing language
+
+Patient-facing language is part of clinical governance. The words shown to a patient can create anxiety, false reassurance, or perceived diagnosis, so they should be reviewed and controlled.
+
+| Avoid | Use |
+| --- | --- |
+| "You have diabetes" | "This result may require confirmation and clinician review." |
+| "You are eligible for GLP-1" | "Possible candidate. Requires medical evaluation." |
+| "Your kidneys are diseased" | "Kidney markers require longitudinal review before chronicity can be assessed." |
+| "Your result is abnormal because of ancestry" | "This marker may require additional biological context for accurate interpretation." |
+| "The AI recommends treatment" | "Your clinician will review whether treatment is appropriate." |
+
+A preventive system should be calm, precise, and limited. It should not use diagnostic language unless a licensed clinician has made that determination.
+
+## Governance audit trail
+
+Every governance action should leave an audit trail covering rule creation (author, date, version, rationale), evidence attached (source, grade, reviewer), medical review completed, rule approved, rule activated, rule changed (diff, rationale, reviewer), rule deprecated, rule retired, patient-facing output generated, clinician case review, and incidents (related decision IDs and corrective action).
+
+The decision record is the unit of auditability for runtime interpretations. Clinical content governance and runtime decision traceability must work together.
+
+## Change management
+
+Clinical knowledge changes over time, and the system must change safely. A change management process defines how to handle a new biomarker, new threshold, new calibration, new pattern, new treatment flag, new AI-agent behavior, new patient-facing message, evidence update, and safety incident.
+
+<Warning>
+  No clinical change should be hidden inside a model prompt, application branch, or undocumented code path.
+</Warning>
+
+## Rollback and retirement
+
+A safe system must be able to undo or retire clinical logic. Rollback may be needed when a rule produces unexpected output, evidence changes, clinician review identifies unsafe wording, a calibration over-applies, a test case fails, a safety incident occurs, or a model provider changes behavior. The lifecycle states `DEPRECATED` and `RETIRED` make this explicit. Outdated content should not remain active by default.
+
+## Governance metrics
+
+The governance program should be measurable.
+
+| Metric | Target |
+| --- | --- |
+| Active rules with evidence source | 100% |
+| Active rules with lifecycle approval | 100% |
+| Active calibrations with evidence grade | 100% |
+| Active treatment flags requiring clinician review | 100% |
+| Patient-facing templates reviewed | 100% |
+| Boot validators passing before release | 100% |
+| Golden tests passing before activation | 100% |
+| Open critical safety issues at release | 0 |
+| Deprecated rules still firing | 0 unless explicitly allowed |
+| Clinician-only states shown as final patient conclusions | 0 |

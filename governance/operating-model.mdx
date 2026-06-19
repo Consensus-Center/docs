@@ -1,0 +1,200 @@
+---
+title: "Operating model"
+description: "How clinical, engineering, product, and compliance teams maintain the engine over time."
+keywords: ["operating model", "RACI", "change management", "review cadence", "team responsibilities"]
+---
+
+Consensus Engine is not a static artifact. It is a living clinical infrastructure layer. Biomarkers change, evidence evolves, guidelines are updated, new calibrations are added, patient workflows expand, AI agents improve, partners integrate, safety findings emerge, clinicians review edge cases, and engineering releases new versions.
+
+The operating model defines how all of this happens without losing control.
+
+<Info>
+  Clinical logic must evolve, but it must evolve through governed change, not informal edits.
+</Info>
+
+## Why the operating model matters
+
+A technical clinical engine can fail even when its architecture is strong: a rule changed without review, a schema deployed before validation, a patient-facing message that overstates certainty, a calibration added without an evidence grade, an agent workflow that drifts from approved boundaries, or only one person who understands deployment and rollback.
+
+Consensus Center needs a clear operating model connecting clinical governance, engineering execution, product design, compliance, and data protection. Clinical content moves through a Medical Director lifecycle, with sign-off queues and release gates controlling what is eligible to go live; rules do not run unless their lifecycle state permits it.
+
+## Operating principle
+
+<Info>
+  Every clinical change should have an owner, a rationale, evidence, validation, approval, release control, monitoring, and a rollback path.
+</Info>
+
+This applies to a new biomarker, threshold, calibration, pattern, treatment flag, safety rule, patient message, AI-agent behavior, vendor or dependency, and release. No clinical change should be made only in a prompt, a spreadsheet, a workflow shortcut, or application code without governance.
+
+## Team responsibilities
+
+The engine is maintained through shared responsibility, but ownership must be clear. The operating model avoids two extremes: clinical governance without engineering enforcement, and engineering execution without clinical review.
+
+| Team | Owns |
+| --- | --- |
+| Medical Director | Clinical correctness, review, approval, safety posture, lifecycle decisions |
+| Clinical reviewers | Assigned rules, cases, protocols, patient-facing language |
+| Engineering | Runtime, schema implementation, validators, deployment, testing, observability, rollback |
+| Product | Patient and operator workflows, visibility rules, UX clarity, workflow completeness |
+| Compliance and legal | Consent, data protection, privacy, regulatory posture, vendor terms, documentation |
+| Data governance | De-identification, outcomes monitoring, dataset use, access control, auditability |
+| AI governance | Agent boundaries, model-provider controls, monitoring, human-review sampling |
+| Operations | Care workflow execution, review queues, follow-up, partner coordination |
+| Security | Access, encryption, secrets, incident response, infrastructure protection |
+
+### Function-specific roles
+
+<AccordionGroup>
+  <Accordion title="Medical Director">
+    The clinical authority for the engine. Approves or rejects interpretation logic; reviews calibration evidence, applies-when logic, uncertainty handling, and patient impact; approves safety controls; ensures treatment flags stay clinician-required; prevents diagnostic or overconfident patient wording; reviews validation results before activation; approves release gates; retires outdated logic; leads clinical incident review; and decides how real-world findings update rules.
+  </Accordion>
+  <Accordion title="Engineering">
+    Owns the system that makes governance enforceable: schema implementation, deterministic runtime, boot validators, the test suite, CI, the deployment runbook, the rollback process, observability, access control, the dependency inventory, and documentation. Engineering knowledge should not be single-threaded — the schema, runtime, and deployment should be documented so the system survives any one person's departure.
+  </Accordion>
+  <Accordion title="Product">
+    Makes the engine understandable and usable without becoming unsafe: patient results (patient-visible states only), review states, missing-data prompts, treatment pathway UX (possible-candidate language), consent flows, operator workflows, clinician review screens, notifications, education, and versioned messages. In a clinical engine, wording is part of safety.
+  </Accordion>
+  <Accordion title="Compliance, legal, and data governance">
+    Owns boundaries around consent, privacy, sensitive data, regulatory positioning, and external sharing: Ley 1581 compliance, granular consent, genotype/ancestry protection, vendor agreements, AI provider terms, OSS and IP review, regulatory language, data retention, incident response, and ensuring open items are not presented as completed claims.
+  </Accordion>
+  <Accordion title="AI governance">
+    Ensures agents remain useful but bounded: agent roster, agent scope, tool grounding, patient transparency, treatment boundaries, calibration boundaries, model-provider governance, monitoring, human-review sampling, and incident response. Models can change workflow efficiency, but they should not change clinical meaning.
+  </Accordion>
+</AccordionGroup>
+
+## Change intake process
+
+Every proposed change enters through a controlled intake process, preventing vague changes from entering the system. Each change records a change ID, requestor, change type, clinical domain, rationale, evidence, patient impact, clinician impact, safety impact, data impact, consent impact, engineering impact, rollback plan, and review owner.
+
+## Change classification
+
+Not every change has the same risk. Classifying changes lets the team move quickly on low-risk changes while slowing down where clinical risk is real.
+
+| Risk level | Examples | Review |
+| --- | --- | --- |
+| Low | Typo fix in non-clinical UI, internal label update | Product or engineering |
+| Moderate | Patient-facing explanation update, workflow change, missing-data prompt | Product plus clinical language review |
+| High | Threshold, calibration, pattern, safety rule, treatment flag | Medical Director, validation, release gate |
+| Critical | `CRITICAL` escalation, contraindication logic, prescribing-adjacent workflow | MD, compliance, engineering, validation, rollback plan |
+| Sensitive data | Genotype, ancestry, consent, vendor data handling | Compliance, legal, MD where clinical |
+| AI behavior | Agent output, model update, tool access change | AI governance, product, engineering, clinical review if patient-facing |
+
+## Clinical change workflow
+
+A clinical rule change follows a controlled path. Activation is gated, and clinical content is not `ACTIVE` until it passes review and relevant release gates.
+
+<Steps>
+  <Step title="Request submitted">Requestor submits the change request.</Step>
+  <Step title="Clinical owner review">Rationale and evidence reviewed.</Step>
+  <Step title="Engineering assessment">Schema impact assessed.</Step>
+  <Step title="Product assessment">Patient and clinician UX impact assessed.</Step>
+  <Step title="Compliance check">Consent, privacy, or claims impact checked if relevant.</Step>
+  <Step title="Medical Director decision">Approve, reject, revise, or request more evidence.</Step>
+  <Step title="Encode">Engineering encodes the rule or updates the schema.</Step>
+  <Step title="Validate">Run golden tests and boot validators.</Step>
+  <Step title="Language review">Product and clinical review patient-facing language.</Step>
+  <Step title="Release gate">Release owner confirms the release gate.</Step>
+  <Step title="Deploy">Engineering deploys with version and rollback path.</Step>
+  <Step title="Monitor">Operations monitors review queues and patient impact.</Step>
+  <Step title="Track outcomes">Data governance tracks outcomes if applicable.</Step>
+</Steps>
+
+### Calibration change workflow
+
+Calibration changes require additional care because they may involve sensitive context: identify mechanism, gather evidence, define applies-when logic, define uncertainty behavior, review consent impact, Medical Director review, encode, validate (applies, does not over-apply, routes uncertainty correctly), review patient language, activate via release-gated transition, and monitor. Genotype governs where confirmed, self-report does not override genotype, and conflicting signals route to clinical correlation.
+
+### AI-agent change workflow
+
+Agent changes do not bypass clinical governance. A new agent, tool access, patient message behavior, treatment workflow, model provider, model version, summarization behavior, escalation rule, or data access pattern each triggers the relevant scope, security, privacy, clinical, and AI governance review. Agents operate with tool-use against the engine and structured data, surfacing what the engine and evidence say rather than inventing clinical conclusions.
+
+## Release governance
+
+A release is not only a technical deployment. Release discipline is what allows the engine to evolve without losing traceability. A release records the schema version, runtime version, clinical content diff, rules that became `ACTIVE`, supporting evidence, medical reviewer, tests passed, patient language changes, data handling changes, dependency changes, rollback plan, and monitoring plan.
+
+## Monitoring after release
+
+Post-release monitoring looks for clinical, technical, product, and operational signals: clinical output (rule firing frequency, unexpected states, clinician disagreement), safety, calibration, treatment pathways, product UX, AI agents, engineering, security, operations, and outcomes. Outcomes monitoring is the layer that validates real-world performance once live.
+
+## Incident operating model
+
+Incidents are classified and routed quickly. The decision trace model is essential here — every interpretation should be reconstructable through input facts, calibrations, rules, evidence, lifecycle state, and resulting state.
+
+| Incident | Owner and response |
+| --- | --- |
+| Clinical safety issue | MD — pause affected rule or pathway, review decision IDs |
+| Validator failure | Engineering — block release or disable affected content |
+| Patient-facing overstatement | Product + clinical — remove or revise message, review affected patients |
+| Agent boundary violation | AI governance — disable behavior, review logs, update constraints |
+| Calibration misuse | MD + data governance — disable calibration, review affected decisions |
+| Lab mapping error | Engineering + clinical — pause affected biomarker interpretation |
+| Security incident | Security + compliance — contain, investigate, notify as required |
+| Consent issue | Compliance + legal — stop affected data use, remediate records |
+| Vendor failure | Engineering + operations — switch fallback or pause dependent workflow |
+| Treatment pathway error | MD + operations — block pathway and review clinician decisions |
+
+## Documentation operating model
+
+Documentation is part of the product. Bracketed engineering fields should be completed, and the dependency and OSS inventory should be reconciled before sharing.
+
+{/* TODO: Complete bracketed engineering fields and reconcile the dependency/OSS inventory before external sharing. */}
+
+Required documentation includes the engine schema dictionary, runtime evaluation flow, boot validator documentation, clinical lifecycle policy, calibration methodology, evidence grading policy, patient-language standards, AI-agent governance policy, model-provider register, data protection policy, consent documentation, release runbook, rollback runbook, incident response plan, dependency and OSS inventory, access control matrix, and partner integration documentation.
+
+## Review cadence
+
+Scheduled review cadences give the system rhythm and prevent governance from becoming reactive only after problems appear.
+
+| Cadence | Review |
+| --- | --- |
+| Weekly | Open clinical review queue, safety flags, release blockers |
+| Biweekly | Engineering release readiness, validator status, product workflow issues |
+| Monthly | Calibration performance, clinician disagreement, patient-language incidents; AI-agent output and boundary monitoring |
+| Quarterly | Evidence library review, source currency, guideline updates; security and access review; vendor and dependency review |
+| Semiannual | Full clinical governance audit |
+| Annual | Regulatory, privacy, and data governance review |
+
+## RACI model
+
+A simple RACI model clarifies ownership. The important point is that no high-risk clinical change has only one owner.
+
+| Activity | Responsible | Accountable | Consulted | Informed |
+| --- | --- | --- | --- | --- |
+| New clinical rule | Clinical reviewer | Medical Director | Engineering, product | Operations |
+| New calibration | Clinical + data governance | Medical Director | Compliance, engineering | Product |
+| New treatment pathway | MD + operations | Medical Director | Compliance, product, engineering | Clinical team |
+| Patient message update | Product | MD for clinical content | Compliance | Operations |
+| Runtime release | Engineering | CTO or engineering lead | MD if clinical content changed | Operations |
+| AI-agent update | AI governance + engineering | Product or AI governance lead | MD if clinical | Operations |
+| Vendor onboarding | Engineering or operations | Compliance or business owner | Security, legal | Relevant teams |
+| Incident response | Incident owner | Function lead | Medical, legal, engineering as needed | Leadership |
+| Rule retirement | Clinical owner | Medical Director | Engineering | Product, operations |
+
+## Operating metrics
+
+The operating model should be measurable. As with validation, target metrics must not be presented as achieved results unless real current outcomes have been filled in.
+
+{/* TODO: Populate with real current outcomes before presenting as achieved. */}
+
+| Metric | Target |
+| --- | --- |
+| Active rules with evidence source | 100% |
+| Active rules with Medical Director approval | 100% |
+| Active calibrations with evidence grade | 100% |
+| Active treatment flags requiring clinician review | 100% |
+| Patient-facing templates reviewed | 100% |
+| Boot validators passing before release | 100% |
+| Golden tests passing before activation | 100% |
+| Open critical clinical safety issues at release | 0 |
+| Unapproved rules running | 0 |
+| Clinician-only states shown as final patient conclusions | 0 |
+| Agent unsupported clinical claims | 0 unresolved |
+| Sensitive data use without consent | 0 |
+| Critical dependencies without owner | 0 |
+| Production releases without rollback plan | 0 |
+| Single-person-only critical system knowledge | 0 critical areas |
+
+## The operating moat
+
+The operating model is part of the moat. A competitor can copy a visible feature, cite the same guideline, build a lab dashboard, or connect an AI model. It is harder to copy a disciplined clinical operating system that combines evidence-linked rules, a calibration library, the Medical Director lifecycle, a golden test suite, decision traces, an outcomes loop, AI boundaries, a privacy and consent model, release gates, and documentation and continuity.
+
+The moat is not a single clever rule, but the accumulated reviewed calibration library and outcomes dataset that refines it. The operating model is what allows that moat to compound safely.
