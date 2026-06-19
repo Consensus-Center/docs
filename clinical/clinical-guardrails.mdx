@@ -1,0 +1,224 @@
+---
+title: "Clinical guardrails"
+description: "How the engine escalates uncertainty instead of over-asserting."
+keywords: ["guardrails", "engine states", "suppression", "clinical hardening", "review routing"]
+---
+
+Consensus Engine is built around a conservative clinical principle: when the system is uncertain, incomplete, confounded, or high-stakes, it should escalate to clinical review instead of producing a confident patient-facing conclusion.
+
+This is an architectural safety feature, not only a product language choice. The engine uses structured states, suppression rules, clinical-hardening rules, review routing, treatment boundaries, lifecycle controls, and decision traceability to prevent unsafe automation. The goal is preventive medicine without premature diagnosis.
+
+## The guardrail philosophy
+
+Preventive systems must detect early signals, but early signals are not always stable, specific, or diagnostic. A biomarker may look abnormal because of pregnancy, recent acute illness, recent strenuous exercise, fasting uncertainty, medication or supplement use, assay method, missing longitudinal context, or genotype/phenotype context.
+
+A system that ignores these factors can produce fast but unsafe interpretation. Consensus Engine can detect a possible signal early, but it must also ask whether the signal is reliable enough to show, whether it requires confirmation, and whether a clinician must review it first.
+
+## The nine engine states as safety controls
+
+The engine uses nine structured states. These determine how the interpretation should be handled, not only how it is labeled.
+
+| State | Meaning | Patient-visible |
+| --- | --- | --- |
+| `OPTIMAL` | Longevity-favorable or better than population range | Yes |
+| `NORMAL` | Within standard clinical range | Yes |
+| `WATCH` | In range, but trending or preventive relevance exists | Yes |
+| `ACTION` | Outside range or clinical intervention may be considered | Yes |
+| `CRITICAL` | Urgent clinical attention required | Yes |
+| `INSUFFICIENT_DATA` | Required inputs are missing or unavailable | Yes |
+| `AWAITING_REVIEW` | Engine needs clinician interpretation | No |
+| `REQUIRES_CLINICAL_CORRELATION` | Ambiguous result requiring clinician correlation | No |
+| `NOT_APPLICABLE` | Rule or interpretation does not apply to the patient | No |
+
+<Note>
+  The two clinician-only review states, `AWAITING_REVIEW` and `REQUIRES_CLINICAL_CORRELATION`, are central guardrails. They let the engine say: the data may matter, but it should not yet be presented as a conclusion.
+</Note>
+
+## Patient-visible states
+
+Patient-visible states are designed for clarity, but they still require careful wording. A `WATCH` state should not sound like disease; it should sound like an early signal worth monitoring.
+
+| State | Patient communication intent |
+| --- | --- |
+| `OPTIMAL` | Reinforce favorable status without implying permanent protection |
+| `NORMAL` | Explain that the marker is within expected range |
+| `WATCH` | Present an early signal calmly, with follow-up context |
+| `ACTION` | Recommend medical review or next-step evaluation without making a diagnosis |
+| `CRITICAL` | Provide urgent escalation instructions |
+| `INSUFFICIENT_DATA` | Explain what information is missing |
+
+A safer patient-facing phrase is "This marker is not currently an emergency, but it may be useful to monitor or review with your clinician." A risky phrase is "You have a disease risk condition." The first preserves prevention; the second creates unsupported certainty.
+
+## Clinician-only review states
+
+Some outputs should not be shown directly to the patient as final interpretations:
+
+- **`AWAITING_REVIEW`** — the engine needs a licensed clinician to interpret the result before patient-facing output.
+- **`REQUIRES_CLINICAL_CORRELATION`** — the data is ambiguous, conflicting, context-dependent, or clinically sensitive.
+- **`NOT_APPLICABLE`** — the rule should not be applied to this patient.
+
+These states are especially important for conflicting inputs, high-stakes interpretation, possible diagnosis, treatment candidacy, sensitive calibration, and missing key facts. The review state is a safety valve. It keeps the system from pretending to know more than it knows.
+
+## Suppression rules
+
+Suppression rules prevent interpretation when context makes the output unreliable or potentially unsafe:
+
+| Rule | Behavior |
+| --- | --- |
+| Pregnancy suppression | Affected interpretations are suppressed during pregnancy |
+| Recent acute illness suppression | Affected markers are suppressed when illness occurred recently |
+| Recent strenuous exercise suppression | Creatinine, CK, AST, and related markers may be suppressed after strenuous exercise |
+
+Suppression does not mean the result is ignored. It means the result is not converted into a potentially misleading conclusion. A suppressed result can still be stored, shown to a clinician, repeated later, or interpreted after the confounding condition resolves.
+
+## Clinical-hardening rules
+
+Clinical-hardening rules prevent premature diagnostic assertions. A preventive engine may identify early concern, but it should not jump from one value to a diagnosis.
+
+| Rule | Behavior |
+| --- | --- |
+| Diabetes hardening | Diabetes is not diagnosed from a single value without confirmation or appropriate clinical context |
+| CKD chronicity requirement | Chronic kidney disease requires sustained evidence over time |
+| Fasting gate | Fasting-dependent markers require confirmed fasting status before interpretation |
+
+The distinction matters:
+
+| Over-assertion | Safe interpretation |
+| --- | --- |
+| "You have diabetes" | "This result may require confirmation and clinician review." |
+| "You have chronic kidney disease" | "Kidney markers need longitudinal review before chronicity can be assessed." |
+| "Your insulin resistance is confirmed" | "This marker depends on fasting status and should be interpreted after confirmation." |
+
+The engine should help the clinician notice risk, not replace the clinician's diagnostic process.
+
+## Fasting gate as a model guardrail
+
+Many metabolic markers depend on whether the patient was fasting. If fasting status is unknown, the engine should not interpret fasting-dependent markers as if fasting were confirmed: glucose, insulin, HOMA-IR, triglycerides, and some metabolic patterns can all be misleading without confirmation.
+
+A safe engine response is: "Fasting status is required before this marker can be interpreted accurately." This avoids a common failure mode in digital health: producing a polished explanation from incomplete context.
+
+## Acute context guardrails
+
+Some lab values are temporarily affected by acute events:
+
+| Context | Affected markers |
+| --- | --- |
+| Recent infection | Inflammation markers, WBC, liver enzymes, ferritin, glucose |
+| Recent intense exercise | CK, AST, ALT, creatinine, inflammatory markers |
+| Dehydration | Creatinine, BUN, electrolytes, concentration-dependent markers |
+| Recent medication change | Lipids, liver markers, glucose, thyroid, hormones |
+| High-dose biotin | Thyroid immunoassay interference and other assay effects |
+
+A representative validation test case routes TSH with high-dose biotin to `REQUIRES_CLINICAL_CORRELATION`, showing how medication or supplement context can change interpretation. The clinical purpose is not to block insight; it is to avoid false precision.
+
+## Treatment boundaries
+
+The engine may evaluate treatment candidacy flags, but it does not authorize treatment. This is especially important for metabolic care and GLP-1 workflows. In the GLP-1 flow, the engine can collect intake facts, evaluate treatment-eligibility conditions, apply fasting gates, run hardening checks, and raise an advisory clinician-required flag. It does not tell the patient they are eligible, and it does not prescribe.
+
+| Stage | Meaning |
+| --- | --- |
+| Advisory flag | The patient may require clinician review |
+| Possible candidate language | The patient should be medically evaluated |
+| Clinician decision | A licensed clinician decides |
+| Prescription | Only under clinician authority |
+| Monitoring | Follows clinical protocol |
+
+<Warning>
+  Patient-facing language should avoid "eligible." A safer phrase is "Possible candidate. Requires medical evaluation." This protects the patient and preserves the physician's role.
+</Warning>
+
+## The AI never prescribes
+
+Consensus separates AI orchestration from clinical decision-making.
+
+<Columns cols={2}>
+  <Card title="AI agents may" icon="circle-check">
+    Collect and organize intake, coordinate scheduling and follow-up, consolidate records, run structured candidacy logic through the engine, support communication in approved language, and send follow-up prompts.
+  </Card>
+  <Card title="AI agents may not" icon="circle-x">
+    Diagnose, prescribe, override a clinician, override the deterministic engine, invent clinical patterns, or present themselves as a human clinician.
+  </Card>
+</Columns>
+
+The clinical core is deterministic, while generative AI is used for orchestration and communication around it, never to make the clinical decision itself. This boundary is one of the system's most important defensibility features.
+
+## Evidence traceability as a guardrail
+
+Every interpretive rule is designed to link to a cited clinical source. Rules link to clinical sources in the evidence library, including sources such as ADA, ACC/AHA, KDIGO, NAMS, and AASLD. The decision trace records which source supported each interpretation.
+
+Evidence traceability prevents unsupported interpretation (the rule must point to a source), unreviewable output (the clinician can inspect the basis), and opaque automation (the decision record shows rule, source, and calibration).
+
+A clinician should never receive "The AI thinks this is abnormal." The clinician should receive: "This rule fired because these facts were present, this threshold was met, this calibration applied, and this source supports the interpretation."
+
+## Lifecycle enforcement as a guardrail
+
+A rule should not run simply because it exists. Clinical content must pass through lifecycle governance before activation:
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+| State | Behavior |
+| --- | --- |
+| `DRAFT` | Not active |
+| `READY_FOR_MD_REVIEW` | Under review, not patient-facing |
+| `MD_APPROVED` | Approved, but not necessarily live |
+| `ACTIVE` | Eligible to run |
+| `DEPRECATED` | Being phased out or replaced |
+| `RETIRED` | Not used |
+
+Rules do not run unless their lifecycle state permits it, and boot-time validators enforce lifecycle-status controls. This makes safety structural: the runtime itself checks whether the rule is allowed to operate.
+
+## Guardrail matrix
+
+This matrix summarizes how different risks are handled — the operational meaning of "escalate rather than over-assert."
+
+| Risk | Engine response |
+| --- | --- |
+| Missing required data | `INSUFFICIENT_DATA` |
+| Ambiguous interpretation | `REQUIRES_CLINICAL_CORRELATION` |
+| Clinician judgment required | `AWAITING_REVIEW` |
+| Confounded by pregnancy | Suppress affected interpretations |
+| Confounded by acute illness | Suppress or delay affected markers |
+| Confounded by recent exercise | Suppress or route relevant markers |
+| Fasting not confirmed | Block fasting-dependent interpretation |
+| Possible diagnosis from single value | Apply hardening rule |
+| Chronicity required | Require longitudinal evidence |
+| Treatment candidacy detected | Raise clinician-required advisory flag |
+| High-risk abnormality | Escalate to `CRITICAL` or urgent review pathway |
+| Unapproved rule | Block at lifecycle validator |
+| Missing rule dependency | Block at boot-time validator |
+
+## Patient communication guardrails
+
+The system should communicate uncertainty clearly. The patient should not be overwhelmed with technical details, but should also not receive false certainty. The tone should be calm, preventive, and precise.
+
+| Situation | Patient language |
+| --- | --- |
+| Early signal | "This may be worth monitoring." |
+| Missing fact | "We need additional information before interpreting this safely." |
+| Confounded result | "This result may be affected by recent context and should be reviewed." |
+| Possible treatment candidacy | "Possible candidate. Requires medical evaluation." |
+| Clinician-only review | "Your clinician is reviewing this result before a final explanation is shown." |
+| Critical finding | "This may require urgent medical attention." |
+
+## Clinician workflow guardrails
+
+Clinicians need the full trace, not only the patient-facing summary. A clinician-facing review should include the raw value, normalized value, runtime facts, rule fired, suppression or hardening applied, calibration applied, evidence source, lifecycle state, a patient-visible draft, and a suggested next step (follow-up, repeat testing, confirmation, or protocol review).
+
+This design supports physician judgment instead of hiding complexity.
+
+## Why these guardrails matter commercially and clinically
+
+Clinical guardrails are part of the product's trust infrastructure, not only risk controls. They support:
+
+| Benefit | How |
+| --- | --- |
+| Patient safety | Reduces risk of over-diagnosis and misleading outputs |
+| Physician trust | Gives clinicians reviewable logic and evidence |
+| Regulatory defensibility | Shows controlled clinical decision-support design |
+| Partner adoption | Makes the system easier for clinics to evaluate |
+| Scientific credibility | Separates evidence-linked interpretation from generic AI |
+| Operational scalability | Allows AI to support workflow without practicing medicine |
+
+A fast AI system may look impressive. A safe clinical system must be explainable, limited, and governed.

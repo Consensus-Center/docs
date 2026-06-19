@@ -1,0 +1,143 @@
+---
+title: "Due diligence readiness"
+description: "What investors, clinical partners, and regulators should be able to verify."
+keywords: ["due diligence", "data room", "verification", "scorecard", "red flags"]
+---
+
+A technical whitepaper should not only explain the system. It should make the system verifiable. For Consensus Center, due diligence readiness means an investor, clinical partner, Medical Director, compliance reviewer, or regulator can inspect the engine and confirm that its claims are supported by architecture, evidence, validation, governance, and operating records.
+
+<Info>
+  The strongest due diligence posture is not "trust us." It is: here is the rule, here is the evidence, here is the reviewer, here is the lifecycle state, here is the validation result, here is the runtime trace, here is the rollback path.
+</Info>
+
+## Due diligence principle
+
+Every major claim about the engine should map to a document, schema object, validation result, or audit record.
+
+| Claim | Backed by |
+| --- | --- |
+| The engine is deterministic | Runtime design, rule schema, test cases |
+| Outputs are traceable | Decision records with rule, calibration, evidence, state |
+| AI does not decide clinically | Agent governance, workflow boundaries, review states |
+| Physicians govern clinical logic | Medical Director lifecycle and sign-off queue |
+| Calibrations are evidence-linked | Calibration records, evidence grades, source links |
+| Patient outputs are safe | Visibility states, approved language, review routing |
+| Treatment flags are not prescriptions | Protocol governance, clinician-required flags |
+| Security is controlled | Access matrix, encryption, audit logging, vendor review |
+| Validation exists | Golden tests, boot validators, results, release gates |
+| System can be maintained | Documentation, runbooks, dependency inventory, continuity |
+
+## What each audience should verify
+
+<Tabs>
+  <Tab title="Investors">
+    Investors should verify whether Consensus Center has a defensible technical and clinical asset, not only a product interface: the technical moat (engine schema, runtime, validation framework, decision trace design), the scientific moat (calibration library, evidence sources, outcomes-learning loop), clinical governance, safety posture, AI defensibility, the data asset, regulatory readiness, IP and dependencies, key-person risk, and commercial readiness. The moat is not one clever rule, but the reviewed, evidence-graded calibration library plus the outcomes dataset that refines it over time.
+  </Tab>
+  <Tab title="Clinical partners">
+    Clinical partners care less about abstract AI and more about safety, workflow, and physician trust. They should verify whether clinicians can review the basis of every output, the system avoids over-diagnosis, ambiguous cases route to clinicians, treatment flags are advisory only, patient-facing language can be controlled, critical findings are escalated, the clinic can see missing data, calibrations are clinically justified, the system is auditable, and the system can be adapted safely.
+  </Tab>
+  <Tab title="Regulators / compliance">
+    Reviewers should see that the system is designed as clinical decision support, not autonomous diagnosis or prescribing: intended use, scope limits (no autonomous diagnosis, prescribing, or treatment authorization), clinical governance, traceability, validation, risk controls, AI role, data protection (Ley 1581, HIPAA-aligned expansion), sensitive inputs used only for documented calibration, and change control.
+  </Tab>
+</Tabs>
+
+## Core diligence artifacts
+
+The data room should include a structured set of artifacts so reviewers can move from high-level explanation to proof: engine architecture overview, schema workbook, clinical guardrails document, calibration methodology, ancestry and context input policy, validation strategy, data model and traceability document, AI architecture and governance, GLP-1 flow, technology stack and dependencies, data protection policy, release and rollback runbook, Medical Director sign-off queue, evidence library export, validation results report, and dependency and OSS inventory.
+
+{/* TODO: Several artifacts require completion before external sharing — validation results, evidence grading, vendor details, OSS inventory, encryption standards, and model-provider governance. */}
+
+## Claims that should be avoided unless proven
+
+The whitepaper should avoid claims that are not yet supported by completed evidence or validation.
+
+| Avoid | Use |
+| --- | --- |
+| "The engine is clinically validated" | "The engine is designed for deterministic validation through golden test cases, boot validators, and MD review. Current results are reported separately." |
+| "All rules are approved" | "Rules move through lifecycle governance. Active rule status should be verified in the schema." |
+| "AI diagnoses patients" | "AI agents support workflow. Clinical interpretation is deterministic and physician-governed." |
+| "Patients are eligible for treatment" | "The engine may raise clinician-required advisory flags." |
+| "The system eliminates bias" | "The system encodes documented calibrations to reduce known interpretation errors where evidence supports correction." |
+| "The dataset is fully de-identified and risk-free" | "De-identified data use requires separate consent and governance." |
+| "The stack is complete" | "Vendor, OSS, security, and dependency fields must be confirmed with engineering." |
+
+Result fields must be filled with real validation outcomes; targets must not be presented as achieved results.
+
+## Diligence packages
+
+The data room should let reviewers move from claim to proof in each area.
+
+<AccordionGroup>
+  <Accordion title="Evidence package">
+    Connects rules to sources: `REF_SOURCES` export, rule-to-source map, calibration-to-source map, evidence grade table, Medical Director review notes, source update policy, outcomes monitoring plan, and deprecated source list. Calibrations link to the engine's evidence library, which includes 113 sources such as ADA, ACC/AHA, KDIGO, NAMS, AASLD, and genomic or pharmacogenomic references.
+  </Accordion>
+  <Accordion title="Validation package">
+    Distinguishes design, targets, and completed results: golden test case list, test execution report, pass/fail summary, boot validator results, calibration validation cases, suppression and hardening tests, treatment flag tests, runtime trace tests, release gate checklist, and open safety issue log. Representative cases include a healthy baseline, severe hyperkalemia escalation, and TSH affected by high-dose biotin routing to clinical correlation.
+  </Accordion>
+  <Accordion title="Clinical governance package">
+    Shows who controls medical logic and how: Medical Director role description, lifecycle policy, sign-off queue, release gate policy, patient-language review policy, treatment pathway governance, calibration review workflow, incident review policy, and deprecation/retirement log. The lifecycle is `DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED`, under Medical Director authority.
+  </Accordion>
+  <Accordion title="AI governance package">
+    Proves agents are bounded: agent roster, agent scope policy, tool-use architecture, model-provider register, prompt and template controls, monitoring plan, human-review sampling policy, incident response plan, treatment-boundary policy, and calibration-boundary policy. Agents are transparent as agents, do not prescribe, do not override the engine or clinician, and route ambiguous cases to clinician review.
+  </Accordion>
+  <Accordion title="Privacy and data governance package">
+    Proves the dataset can become valuable without becoming uncontrolled: data classification matrix, consent flow, sensitive input policy, access control matrix, audit log policy, de-identification protocol, retention policy, vendor data-processing register, incident response plan, and outcomes-learning governance.
+  </Accordion>
+  <Accordion title="Technical and IP package">
+    Shows the engine is maintainable, ownable, and free of hidden third-party risk: architecture diagram, schema documentation, runtime documentation, deployment runbook, rollback runbook, dependency inventory, OSS license review, IP assignment reconciliation, access continuity plan, security architecture, and backup and recovery plan. OSS and third-party components must be inventoried with licenses and reconciled with the Engine IP Assignment, Exhibit A.
+  </Accordion>
+</AccordionGroup>
+
+## Red flags diligence should eliminate
+
+Used internally as a preparation checklist:
+
+| Red flag | Resolution |
+| --- | --- |
+| Clinical logic hidden in prompts | Keep logic in schema, not agent generation |
+| No Medical Director lifecycle | Use formal review and sign-off |
+| No validation results | Run and report golden tests and validators |
+| No evidence linkage | Attach sources to active rules |
+| No patient-language review | Review templates clinically |
+| Treatment flags presented as eligibility | Use clinician-required advisory language |
+| Sensitive ancestry logic too broad | Use mechanism-specific applies-when logic |
+| Vendor data handling unclear | Complete vendor and model-provider review |
+| OSS license risk unknown | Complete dependency inventory |
+| Founder-only technical knowledge | Complete documentation and continuity plan |
+| No rollback path | Create release and rollback runbooks |
+| Targets presented as achieved results | Separate targets from actual results |
+
+## Data room structure
+
+Organized so reviewers can move from high-level explanation to proof. The purpose is not to overwhelm reviewers — it is to make each claim inspectable.
+
+| Section | Contents |
+| --- | --- |
+| 01 Corporate and IP | Company documents, IP assignment, founder assignments, OSS reconciliation |
+| 02 Product and Market | Product overview, workflows, partner model, commercial materials |
+| 03 Engine and Architecture | Schema overview, architecture, runtime, traceability, stack |
+| 04 Clinical Governance | MD lifecycle, guardrails, sign-off queue, release gates |
+| 05 Scientific Foundation | Calibration science, evidence library, evidence grading, source maps |
+| 06 Validation | Golden tests, boot validators, validation results, release records |
+| 07 AI Governance | Agent roster, boundaries, model-provider governance, monitoring |
+| 08 Privacy and Security | Data protection, consent, access control, vendor register, incident response |
+| 09 Clinical Pathways | GLP-1 flow and other protocol-governed pathways |
+| 10 Operations | Runbooks, deployment, rollback, continuity, support workflows |
+
+## Diligence readiness scorecard
+
+A simple scorecard makes readiness visible across architecture, clinical governance, evidence, validation, AI governance, treatment pathways, privacy, security, dependencies, release management, continuity, and the data moat. For each area, mark:
+
+- **Green** — complete and evidence available.
+- **Yellow** — designed but needs documentation or confirmation.
+- **Red** — missing, unclear, or not ready for external diligence.
+
+This avoids false confidence and helps prioritize work.
+
+## Suggested diligence narrative
+
+<Note>
+  Consensus Center is building a physician-governed clinical interpretation engine for preventive precision health. The core engine is deterministic and evidence-linked. AI agents coordinate workflow but do not make clinical decisions. Each output is traceable to patient facts, rules, calibrations, lifecycle state, and evidence. Ambiguous or high-stakes results route to clinicians. Treatment pathways produce clinician-required advisory flags, not prescriptions or authorizations. The system is designed to improve as consented, de-identified outcomes refine the calibration library over time.
+</Note>
+
+This narrative is strong because it is technical, cautious, and verifiable.

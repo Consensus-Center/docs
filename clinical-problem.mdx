@@ -1,0 +1,93 @@
+---
+title: "The clinical problem"
+description: "Preventive interpretation without over-diagnosis, bias, or unsafe automation."
+keywords: ["reference ranges", "over-diagnosis", "clinical bias", "miscalibration", "preventive medicine"]
+---
+
+Preventive medicine depends on seeing risk earlier. That sounds simple, but it creates a difficult clinical problem: the earlier a system interprets biological data, the easier it is to overstate weak signals, misread context, or apply population ranges that do not fit the patient.
+
+Consensus Center is designed around this tension. The system must help clinicians detect meaningful signals before disease is advanced, while preventing premature diagnosis, automatic treatment decisions, and opaque AI interpretation.
+
+## The first problem: reference ranges are not neutral
+
+Most lab interpretation starts with a reference range. A result is marked low, normal, high, or critical based on population-derived thresholds. This is useful, but it is incomplete.
+
+Reference ranges, risk scores, and clinical decision rules have historically been derived from populations that under-represent people of African descent and other groups. When these ranges are applied uniformly, the errors are not random. They can move in a known direction and produce predictable clinical blind spots.
+
+Consensus Center serves populations where standard interpretation may be systematically miscalibrated. The problem is not only access to testing. The problem is whether the interpretation layer understands the patient. A preventive health system that only digitizes conventional ranges may become faster, but not necessarily more accurate.
+
+### Examples of miscalibration
+
+The scientific foundation of the engine identifies several canonical mechanisms where standard interpretation may fail:
+
+| Mechanism | Why standard interpretation fails | Clinical risk |
+| --- | --- | --- |
+| Duffy-null / ACKR1 phenotype | Lower baseline neutrophil counts may be read as abnormal | Healthy patients mislabeled as neutropenic |
+| APOL1 high-risk genotype | Kidney risk may not be captured by creatinine or eGFR alone | Renal risk remains invisible to standard screening |
+| Hemoglobinopathies | HbA1c may not reflect true glycemia | Diabetes risk over-staged or under-staged |
+| Vitamin D by ancestry or altitude | Generic cutoffs may not fit biological context | Deficiency misclassified |
+
+The point is not that every patient needs a different medicine. It is more precise: some biological contexts change what a biomarker means. If the system does not recognize that, it can produce confident but wrong interpretation.
+
+## The second problem: prevention can become over-diagnosis
+
+Preventive systems often try to act earlier than traditional care. That is valuable, but it can become unsafe if early signals are treated as final diagnoses.
+
+A single lab value may suggest risk, but it may not be enough to diagnose a disease. A biomarker may be temporarily abnormal because of recent illness, pregnancy, strenuous exercise, fasting status, medication effects, assay interference, hydration, or specimen timing.
+
+For this reason, the engine separates early signal detection from clinical conclusion. It can identify a WATCH or ACTION state, but it also applies hardening rules before any stronger clinical interpretation is allowed. For example, diabetes is not diagnosed from a single value, CKD requires chronicity, and fasting-dependent markers require confirmed fasting status before interpretation.
+
+<Tip>
+  The preventive posture of the system: detect early, but do not over-assert.
+</Tip>
+
+## The third problem: AI can amplify the wrong interpretation
+
+General clinical AI does not automatically solve bias or miscalibration. If a model is trained on biased or incomplete clinical assumptions, it may apply those assumptions faster and at larger scale.
+
+In healthcare, speed is not the only bottleneck. The more important question is whether the interpretation is correct for the specific patient.
+
+This is why Consensus separates generative AI from the clinical core. The clinical core is deterministic. Interpretations come from reviewed rules and calibrations, not from a generative model. AI is used around the engine for orchestration, communication, intake, follow-up, and record consolidation. It does not make the clinical decision.
+
+This design prevents a common failure mode: an AI system that sounds clinically fluent but cannot show exactly which rule, evidence source, calibration, and lifecycle state produced the answer.
+
+## The fourth problem: patients need clarity, not false certainty
+
+A patient-facing system must be careful with language. It should not tell a patient they have a condition when the result only suggests a possible signal. It should not say a patient is eligible for a treatment when the correct statement is that they may require medical evaluation.
+
+This is why Consensus uses structured states:
+
+- **Patient-visible states:** `OPTIMAL`, `NORMAL`, `WATCH`, `ACTION`, `CRITICAL`, and `INSUFFICIENT_DATA`.
+- **Clinician-only states:** `AWAITING_REVIEW` and `REQUIRES_CLINICAL_CORRELATION`.
+
+These review states are central guardrails. Ambiguous or high-stakes findings are routed to a clinician instead of being shown to the patient as an automated conclusion. The goal is to present information at the right level of certainty.
+
+## The design requirement
+
+The clinical problem can be summarized as five requirements:
+
+<Steps>
+  <Step title="Detect early biological signals">
+    The system must surface meaningful signals before disease is advanced.
+  </Step>
+  <Step title="Avoid unsupported diagnoses">
+    It must avoid turning signals into unsupported diagnoses.
+  </Step>
+  <Step title="Correct known interpretation bias">
+    It must correct known interpretation bias where evidence supports calibration.
+  </Step>
+  <Step title="Escalate uncertainty to clinicians">
+    It must route ambiguous or high-stakes findings to clinician review.
+  </Step>
+  <Step title="Leave an audit trail">
+    It must leave an audit trail for every interpretation.
+  </Step>
+</Steps>
+
+Consensus Engine is built to satisfy these requirements structurally. It does not rely on informal caution alone. It encodes caution into states, suppressions, hardening rules, calibration logic, lifecycle gates, and physician review.
+
+## Practical implication
+
+Consensus Center is not simply building a lab-results dashboard. A dashboard shows values. The engine interprets values through context, evidence, safety rules, and medical governance.
+
+That distinction matters. In preventive medicine, a better system is not the one that produces the most alerts. It is the one that knows when to alert, when to wait, when to ask for more information, and when to send the case to a clinician.

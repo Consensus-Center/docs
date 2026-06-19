@@ -12,27 +12,49 @@
     "dark": "/images/FaviconDark.svg"
   },
   "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
     "groups": [
       {
-        "group": "Getting Started",
+        "group": "Introduction",
         "pages": [
           "index",
-          "quickstart"
+          "clinical-problem"
         ]
       },
       {
-        "group": "Group",
+        "group": "Architecture",
         "pages": [
-          "untitled-page"
+          "architecture/system-overview",
+          "architecture/engine-schema",
+          "architecture/runtime-traceability",
+          "architecture/technology-stack"
+        ]
+      },
+      {
+        "group": "Clinical methodology",
+        "pages": [
+          "clinical/calibration-methodology",
+          "clinical/ancestry-genotype-inputs",
+          "clinical/clinical-guardrails",
+          "clinical/evidence-management"
+        ]
+      },
+      {
+        "group": "Governance & safety",
+        "pages": [
+          "governance/physician-governance",
+          "governance/validation-strategy",
+          "governance/ai-agent-architecture",
+          "governance/treatment-governance",
+          "governance/security-privacy",
+          "governance/operating-model",
+          "governance/release-deployment"
+        ]
+      },
+      {
+        "group": "For stakeholders",
+        "pages": [
+          "stakeholders/due-diligence",
+          "stakeholders/final-synthesis"
         ]
       }
     ]

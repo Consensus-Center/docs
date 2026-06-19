@@ -1,0 +1,169 @@
+---
+title: "Runtime facts and decision traceability"
+description: "How every interpretation becomes auditable, from input facts to resulting state."
+keywords: ["decision record", "runtime facts", "traceability", "reproducibility", "audit"]
+---
+
+Consensus Engine is designed so that every interpretation can be traced back to the exact facts, rules, calibrations, and evidence that produced it. This is part of the clinical safety model, not a secondary reporting feature. If a system interprets health data, the clinician must be able to ask:
+
+- What did the engine know?
+- Which rule fired?
+- Was a calibration applied?
+- Was the rule approved?
+- What evidence supported it?
+- Was the result safe to show the patient?
+- Can the same decision be reproduced later?
+
+The runtime layer exists to answer those questions.
+
+## The decision record
+
+Every engine evaluation emits a structured decision record. This record is the basic unit of auditability in the system.
+
+| Field | Description |
+| --- | --- |
+| `decision_id` | Unique identifier for the interpretation event |
+| Organization reference | Links the decision to the operating clinical organization |
+| Patient reference | Links the decision to the patient record without relying on free text |
+| Inputs considered | Which facts were available at runtime |
+| Biomarker values | The values used in the interpretation |
+| Derived values | Computed indices such as BMI, HOMA-IR, eGFR |
+| Rules fired | Which deterministic rule produced the state |
+| Calibrations applied | Whether context changed the interpretation |
+| Evidence cited | Links the output to clinical or scientific sources |
+| Resulting state | The final engine state |
+| Review routing | Whether the output is patient-visible or clinician-only |
+| Version context | The rule and calibration versions active at the time |
+
+## Runtime facts: the input contract
+
+The engine does not evaluate arbitrary text. It evaluates a defined catalog of runtime facts — the structured inputs the engine is allowed to use when applying rules. This prevents hidden assumptions. If a rule depends on fasting status, pregnancy status, medication exposure, genotype, assay method, or prior lab values, that dependency must exist as a defined fact.
+
+| Fact layer | Examples | Count |
+| --- | --- | --- |
+| Profile fields | Biological sex, age, fasting status, pregnancy status, current medications | 35 |
+| Derived facts | BMI, absolute change, direction of change, medication category | 5 |
+| Biomarker states | HbA1c state, HOMA-IR state, ferritin state, ALT state | 20 |
+| Derived flags | FIB-4 high, creatinine rising, ketones positive, rhabdomyolysis risk context | 5 |
+| Specimen quality | Assay method, dehydration at draw, time of draw | 6 |
+| Longitudinal facts | Prior eGFR value, days since last B12 test, prior measurement context | 3 |
+
+### Why the input contract matters
+
+In clinical interpretation, missing context can be dangerous. A glucose value may require fasting status; a creatinine result may be affected by recent strenuous exercise or dehydration; a thyroid result may be affected by high-dose biotin; an HbA1c result may be distorted by hemoglobinopathy; a neutrophil count may require Duffy-null context; an eGFR interpretation may require prior values to determine chronicity.
+
+Without an explicit input contract, a system may silently assume that missing facts are normal. Consensus avoids this. If a required fact is missing, the engine can return `INSUFFICIENT_DATA`, `AWAITING_REVIEW`, or `REQUIRES_CLINICAL_CORRELATION` instead of producing an unsafe conclusion.
+
+<Note>
+  Lack of data is treated as a clinical condition of the interpretation, not as a technical inconvenience.
+</Note>
+
+## The traceability chain
+
+Every output should be reconstructable through a simple chain:
+
+```
+Input facts → derived computations → calibrations applied → rules fired → evidence cited → state produced → review routing
+```
+
+A metabolic interpretation may depend on fasting status, glucose, insulin, HbA1c, BMI, HOMA-IR, medication use, and prior values. The decision record shows which of those facts were present, which formulas were calculated, whether any calibration applied, which rule fired, what state was produced, and whether the output required clinician review.
+
+## Rules fired
+
+The decision record must show the rule or rules that fired, because the same biomarker value can lead to different outputs depending on context. A result may be normal in isolation but relevant in a pattern, or look abnormal but be suppressed because of pregnancy, recent illness, recent exercise, assay interference, or missing fasting confirmation. The rule trace answers:
+
+- **Which rule fired?** Allows clinical review of the exact logic.
+- **What condition triggered the rule?** Shows why the output was produced.
+- **What lifecycle state was the rule in?** Confirms the rule was allowed to run.
+- **Was the rule patient-visible?** Prevents clinician-only logic from being shown directly.
+- **Did any suppression override it?** Protects against unsafe interpretation.
+- **Was there a conflict?** Prevents contradictory outputs.
+
+## Calibrations applied
+
+If a calibration changes interpretation, the decision record must show it clearly. A calibration trace should answer which calibration applied (for example, Duffy-null neutrophil, APOL1 kidney-risk, or HbA1c hemoglobinopathy calibration), why it applied (confirmed genotype, phenotype signal, self-reported ancestry with conservative handling, or specimen/context condition), what evidence level supported it, what version was active, whether it required clinician confirmation, and whether it changed patient-visible output.
+
+<Warning>
+  Calibration is a clinical responsibility. It should never feel like an invisible algorithmic adjustment. The clinician must be able to see the basis, confidence, and version behind it.
+</Warning>
+
+## Evidence cited
+
+Every interpretive rule should connect to an evidence source. Consensus Engine maintains an evidence library through `REF_SOURCES`, including clinical guidelines and genomic or pharmacogenomic references — 113 evidence sources in the reference layer. The evidence trace lets a clinician ask what source supported the rule, whether it was a guideline, cohort, mechanistic paper, or expert-reviewed rule, whether the evidence was current at activation, whether the rule was modified from the source, and whether the evidence applies to this patient context.
+
+This is especially important in preventive medicine, where earlier signals often require more careful explanation because they may appear before conventional diagnostic thresholds.
+
+## Resulting state
+
+The decision record stores the final engine state. The engine uses nine states:
+
+| State | Meaning |
+| --- | --- |
+| `OPTIMAL` | Favorable preventive state |
+| `NORMAL` | Within standard clinical range |
+| `WATCH` | Early signal, trend, or preventive relevance |
+| `ACTION` | Clinical attention or intervention may be considered |
+| `CRITICAL` | Urgent clinical attention required |
+| `INSUFFICIENT_DATA` | Required information is missing |
+| `AWAITING_REVIEW` | Clinician review required before patient-facing interpretation |
+| `REQUIRES_CLINICAL_CORRELATION` | Ambiguous or context-dependent result |
+| `NOT_APPLICABLE` | Rule does not apply to this patient |
+
+`AWAITING_REVIEW` and `REQUIRES_CLINICAL_CORRELATION` are non-patient-visible review states — core safety states, because ambiguous or high-stakes results are routed to clinicians instead of being shown as automated conclusions. The state is not only a label; it determines how the output should be handled.
+
+## Patient-visible versus clinician-only output
+
+Traceability also controls visibility. Not every internal interpretation should be shown directly to the patient.
+
+| State | Patient handling |
+| --- | --- |
+| Normal or optimal | Shown with plain explanation; rule and source trace available |
+| `WATCH` | Shown as an early signal; trend and supporting facts visible |
+| `ACTION` | Shown carefully with medical follow-up language; full rule, source, and safety context visible |
+| `CRITICAL` | Urgent instruction and escalation pathway; full trace and safety escalation visible |
+| `INSUFFICIENT_DATA` | Explain what is missing; show missing facts and required inputs |
+| `AWAITING_REVIEW` | Not shown as a conclusion; clinician reviews the case |
+| `REQUIRES_CLINICAL_CORRELATION` | Not shown as a conclusion; clinician correlates with history, symptoms, medications, and context |
+
+This prevents the product from creating false certainty for the patient while still giving the clinician the full technical basis.
+
+## Historical reproducibility
+
+A clinical interpretation may need to be reviewed months later. The system must reproduce what happened at that time, not what would happen under today's updated rules. That requires versioning of rule version, calibration version, evidence source version, formula version, lifecycle state, and the runtime fact catalog.
+
+Because everything is versioned, a decision made months ago can be reproduced exactly as it was then. This is critical for clinical audit, regulatory review, incident review, and scientific learning.
+
+## Decision traceability and outcomes learning
+
+Decision traces are not only for compliance. They are also the foundation for scientific improvement. When outcomes are linked back to decision records, the team can evaluate whether a calibration improved interpretation, whether a `WATCH` state predicted later deterioration, whether a rule created too many false alerts, whether a suppression rule prevented unsafe interpretation, and whether specific patient contexts required different handling.
+
+Accumulated decision records, inputs, calibrations, and outcomes form a longitudinal, ancestry-linked clinical dataset that can refine calibrations over time. This is the compounding asset of the system: each reviewed decision can improve future interpretation, provided consent, privacy, and governance requirements are respected.
+
+## Data protection around decision records
+
+Decision records are sensitive clinical data. They may include lab values, medications, clinical context, derived flags, genetic or ancestry-related inputs, and clinician review outcomes, so they require strong protection, access control, and audit logging.
+
+Clinical data and decision records are treated as sensitive data under Colombian Ley 1581, with HIPAA-aligned handling planned for expansion. De-identified data may improve calibrations only with separate consent. The practical standard is least privilege, segregation by organization and patient context, audit logging, transparent and permissioned consent, de-identification of learning datasets, and purpose limitation for ancestry, genotype, and clinical data.
+
+<Info>
+  Traceability should not compromise privacy. The system must preserve both.
+</Info>
+
+## Example decision trace
+
+A simplified decision trace might look like this:
+
+| Step | Example |
+| --- | --- |
+| Patient facts | Age, biological sex, fasting confirmed, current medications, pregnancy status |
+| Lab inputs | Glucose, HbA1c, insulin, triglycerides, HDL |
+| Derived computation | HOMA-IR calculated |
+| Calibration | None applied, or HbA1c calibration applied if hemoglobinopathy context exists |
+| Rule fired | Metabolic `WATCH` or `ACTION` rule |
+| Hardening applied | Diabetes not asserted from a single value |
+| Evidence cited | Relevant metabolic guideline or reviewed clinical source |
+| Output state | `WATCH` or `ACTION` |
+| Visibility | Patient-visible with careful language, or clinician review if ambiguous |
+| Decision record | Stored with `decision_id`, rule ID, source ID, version, and timestamp |
+
+The engine does not simply say "high risk." It shows how it got there.

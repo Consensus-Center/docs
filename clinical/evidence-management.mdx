@@ -1,0 +1,178 @@
+---
+title: "Evidence management and scientific defensibility"
+description: "How sources, evidence grades, rule provenance, and updates are governed."
+keywords: ["evidence library", "evidence grading", "rule provenance", "scientific moat", "source currency"]
+---
+
+The Consensus Engine depends on evidence-linked interpretation. A clinical rule should not exist as an isolated technical object — it should be connected to a source, reviewed by medical leadership, versioned, validated, and monitored over time.
+
+This matters because preventive medicine often operates before conventional disease thresholds are reached. Earlier interpretation can be valuable, but only if the system can explain why a signal matters and how strong the supporting evidence is. The engine's architecture includes an evidence library through `REF_SOURCES`, with 113 referenced sources, including clinical guidelines and genomic or pharmacogenomic references.
+
+## Evidence principle
+
+<Info>
+  Every clinical interpretation should be explainable through a reviewed source, a defined rule, a lifecycle state, and a decision trace.
+</Info>
+
+The system should be able to answer what source supports a rule, what type of evidence it is, who reviewed it, what version was active, whether it is allowed to run, how it was tested, and what happened at runtime. A rule without evidence may still be a hypothesis, but it should not be active patient-facing clinical logic.
+
+## Evidence library
+
+The evidence library is the controlled source set used by the engine. Interpretive rules link to cited clinical sources, including ADA, ACC/AHA, KDIGO, NAMS, and AASLD, and the decision trace records which source supported each interpretation.
+
+| Field | Description |
+| --- | --- |
+| `source_id` | Unique identifier used by rules and decision traces |
+| Source title | Human-readable source name |
+| Source type | Guideline, peer-reviewed study, cohort, mechanistic paper, reference database, or expert-reviewed source |
+| Clinical domain | Metabolic, renal, lipid, hepatic, endocrine, hematology, pharmacogenomics |
+| Publication or update date | Helps determine currency |
+| Evidence grade | Strength of support |
+| Reviewed by | Medical Director or clinical reviewer |
+| Review date | When the source was reviewed |
+| Linked rules | Which thresholds, calibrations, patterns, or protocols depend on it |
+| Status | Active, superseded, under review, deprecated, or retired |
+| Notes | Clinical interpretation boundaries or limitations |
+
+## Evidence should be attached to clinical objects
+
+Evidence should not live only in a bibliography. It should be attached directly to the clinical objects that use it.
+
+| Clinical object | Evidence attached |
+| --- | --- |
+| Biomarker threshold | Source supporting range, state, or cutoff |
+| Trend rule | Source or rationale for longitudinal interpretation |
+| Derived formula | Source defining the formula and intended use |
+| Calibration | Source supporting context-specific adjustment |
+| Pattern | Evidence or MD rationale for multi-marker interpretation |
+| Safety suppression | Source or rationale for blocking interpretation |
+| Hardening rule | Source supporting confirmation, chronicity, or clinical correlation |
+| Treatment flag | Source or protocol basis for clinician-required review |
+| Patient-facing message | Medical language review and approved phrasing |
+
+## Evidence grading
+
+Evidence grading lets clinicians and reviewers distinguish strong support from early or limited support.
+
+{/* TODO: The evidence grading scale must be formally defined and confirmed with the Medical Director. This model is recommended, not final. */}
+
+| Grade | Evidence | Use |
+| --- | --- | --- |
+| A | Clinical guideline or strong replicated clinical evidence | Eligible for patient-facing use after MD review and validation |
+| B | Peer-reviewed cohort evidence with clinically meaningful effect | Eligible with MD review, traceability, and monitoring |
+| C | Mechanistic or biologically plausible evidence with limited outcome data | Clinician-review only or conservative use |
+| D | Expert consensus or internal clinical rationale | Not patient-facing unless explicitly approved and limited |
+| E | Exploratory hypothesis or early research signal | Research mode only, not active clinical logic |
+
+## Evidence and calibration
+
+Calibration is the area where evidence quality matters most. A calibration changes how a biomarker is interpreted, so weak evidence can create harm if the calibration is over-applied. Each calibration should include the mechanism, evidence source, evidence grade, applies-when logic, population relevance, clinical impact, safety limit, reviewer, version, and monitoring plan.
+
+The calibration methodology defines the evidence-to-rule pipeline: identify signal, gather evidence, encode the rule, perform Medical Director review, activate through release gates, monitor outcomes, and revise as evidence evolves.
+
+## Evidence and preventive thresholds
+
+Preventive medicine often uses earlier signals than traditional diagnostic cutoffs. That can be appropriate, but it must be labeled correctly. The system must avoid presenting preventive thresholds as diagnostic thresholds.
+
+| Threshold type | Meaning | Language |
+| --- | --- | --- |
+| Diagnostic threshold | Supports clinical diagnosis when criteria are met | Requires clinician determination |
+| Clinical action threshold | Medical attention or intervention may be needed | "Requires clinician review" |
+| Preventive watch threshold | Earlier signal for monitoring or lifestyle review | "Worth monitoring" |
+| Optimal range | Longevity-favorable or favorable preventive zone | "Favorable range" |
+| Safety threshold | Requires urgent escalation or suppression | "Urgent review" or hidden until reviewed |
+
+<Note>
+  A `WATCH` state is not a disease. An `ACTION` state is not automatically a diagnosis. A treatment flag is not treatment approval. This distinction should be part of the evidence review.
+</Note>
+
+## Source currency and updates
+
+Medical evidence changes — guidelines are updated, new studies appear, some mechanisms become stronger and others weaker. The evidence library therefore needs an update process.
+
+| Trigger | Action |
+| --- | --- |
+| New guideline published | Review affected rules |
+| Guideline retired or replaced | Deprecate or update source |
+| New calibration evidence | Review applies-when logic and evidence grade |
+| Contradictory evidence appears | Route rule to Medical Director review |
+| Safety issue emerges | Pause, revise, or retire affected logic |
+| Clinician disagreement pattern | Reassess rule evidence and thresholds |
+| Outcomes monitoring changes confidence | Update grade or rule behavior |
+| Regulatory change | Review patient language and pathway use |
+
+## Rule provenance
+
+Every clinical rule should have provenance — the system knows where the rule came from, why it exists, who reviewed it, and how it changed over time. Provenance includes the rule ID, author, date added, rationale, evidence source, evidence grade, reviewer, lifecycle state, version, change history, deprecation reason, linked test cases, and runtime usage.
+
+## Evidence and lifecycle states
+
+Evidence quality should influence lifecycle movement. A clinical object should not move from draft to active without evidence review. This protects the system from unsupported rules becoming active.
+
+| State | Evidence expectation |
+| --- | --- |
+| `DRAFT` | Evidence may be incomplete or under collection |
+| `READY_FOR_MD_REVIEW` | Evidence package prepared for clinical review |
+| `MD_APPROVED` | Medical Director has reviewed evidence and logic |
+| `ACTIVE` | Rule passed release gates and may run |
+| `DEPRECATED` | Evidence changed, better rule exists, or use is being phased out |
+| `RETIRED` | Rule should no longer run |
+
+## Evidence and validation
+
+Evidence review answers "Is this clinically reasonable?" Validation answers "Does the engine behave as expected?" Both are required.
+
+| Evidence review | Validation |
+| --- | --- |
+| Reviews the clinical basis | Tests runtime behavior |
+| Checks source quality | Checks expected output |
+| Reviews patient-language risk | Checks message visibility |
+| Reviews calibration rationale | Checks applies-when logic |
+| Reviews safety posture | Checks suppression and hardening behavior |
+| Approves medical logic | Confirms reproducible execution |
+
+A rule with good evidence can still fail validation if encoded incorrectly. A rule that passes technical validation can still be clinically inappropriate if the evidence is weak. Both controls must pass.
+
+## Evidence for patient-facing language
+
+Patient-facing language also needs evidence and governance. The system should not use stronger language than the evidence supports. This is especially important in preventive health — a patient may act emotionally on a phrase before understanding the limitation behind it.
+
+| Evidence situation | Patient language |
+| --- | --- |
+| Strong diagnostic criteria met, clinician confirmed | Clinician-approved diagnosis language may be used |
+| Strong clinical signal, not diagnostic | "This may require medical review" |
+| Preventive signal | "This may be useful to monitor" |
+| Uncertain context | "This needs clinical correlation" |
+| Missing evidence or facts | "More information is needed before interpretation" |
+| Treatment flag | "Possible candidate. Requires medical evaluation." |
+
+## Conflicting evidence
+
+Not every source will agree. When evidence conflicts, the engine should not hide that conflict. A conservative system can still act on weaker evidence, but only with limited language, clinician visibility, and appropriate routing.
+
+| Conflict | Handling |
+| --- | --- |
+| Guidelines disagree | Medical Director review and jurisdiction-specific posture |
+| Cohort evidence differs by population | Restrict applies-when logic |
+| Mechanistic evidence lacks outcomes | Lower evidence grade or clinician-only use |
+| New evidence contradicts active rule | Pause or review affected rule |
+| Evidence supports signal but not intervention | Allow `WATCH`, block treatment flag |
+| Evidence supports association but not causation | Avoid strong causal language |
+
+## Evidence in the decision trace
+
+At runtime, evidence should appear in the decision record so a clinician can review the basis of an output, not only the output itself. The trace shows the rule ID, source ID, evidence grade, calibration ID, calibration evidence, lifecycle state, version, patient visibility, and reviewer.
+
+## Scientific moat
+
+The scientific moat of Consensus Center is not one isolated rule. It is the accumulated system of:
+
+- **Evidence-linked rules** — clinical logic becomes reviewable and reusable.
+- **Calibration library** — interpretation becomes more precise for under-represented patients.
+- **Decision traces** — every output becomes auditable.
+- **Outcomes data** — rules can be evaluated against real-world results.
+- **Medical governance** — changes are reviewed, not improvised.
+- **Validation suite** — updates can be tested repeatedly.
+- **Version history** — learning can happen without losing reproducibility.
+
+The moat is the reviewed, evidence-graded calibration library plus the outcomes dataset that refines it over time. This is defensible because competitors can copy a published mechanism, but not easily reproduce a governed library, clinical review process, decision trace dataset, and outcomes feedback loop.

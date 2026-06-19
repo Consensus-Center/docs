@@ -1,0 +1,227 @@
+---
+title: "Treatment and protocol governance beyond GLP-1"
+description: "How the engine supports clinical pathways without becoming an automated prescriber."
+keywords: ["treatment pathways", "GLP-1", "contraindications", "protocol linkage", "clinician-required flags"]
+---
+
+The GLP-1 workflow is one example of a broader principle inside Consensus Center: the engine may identify a possible clinical pathway, but it must never authorize treatment.
+
+Treatment-related logic is one of the highest-risk areas of any preventive health platform. A biomarker signal can suggest that a patient may benefit from clinical review, but it does not mean the patient should automatically receive a medication, supplement, hormone, peptide, procedure, or protocol. Consensus Engine handles this by separating signal detection, clinical pathway flagging, physician review, and treatment execution.
+
+## The core boundary
+
+The system preserves a clear boundary between decision support and medical action.
+
+| Component | May | Must never |
+| --- | --- | --- |
+| Engine | Detect rule-based signals and raise clinician-required flags | Prescribe, authorize, or diagnose |
+| AI agents | Coordinate intake, follow-up, missing data, case preparation | Decide treatment or override the clinician |
+| Clinical protocol | Define how a licensed clinician evaluates a pathway | Replace individualized medical judgment |
+| Licensed clinician | Review, decide, prescribe, monitor, or refer | Delegate final medical responsibility to the AI |
+| Patient app | Communicate next steps in approved language | Promise treatment access or eligibility |
+
+AI agents flag, interpret as decision support, and route. They never prescribe and never make a clinical decision. Treatment eligibility logic produces clinician-required flags, not authorizations.
+
+## What a treatment flag means
+
+A treatment flag is not a recommendation to treat. It is a structured signal that a clinician may need to review a possible pathway. It indicates possible relevance (patient data matches a reviewed pathway condition), is structured (from deterministic schema logic), evidence-linked, safety-limited (suppressions, contraindications, and hardening rules may block or route the case), clinician-required, traceable, and not final.
+
+The GLP-1 flow uses this model directly: if conditions are met, a clinician-required flag is raised, never an authorization. The same pattern applies to every treatment-adjacent pathway.
+
+## General pathway structure
+
+Every treatment pathway follows a controlled sequence. This keeps the engine useful without letting it become autonomous.
+
+<Steps>
+  <Step title="Collect intake facts">
+    Avoids pathway evaluation from incomplete context.
+  </Step>
+  <Step title="Normalize clinical data">
+    Prevents unit, alias, or format errors.
+  </Step>
+  <Step title="Compute derived values">
+    Supports structured interpretation.
+  </Step>
+  <Step title="Apply calibrations if relevant">
+    Prevents misclassification where context changes meaning.
+  </Step>
+  <Step title="Evaluate pathway criteria">
+    Produces an advisory flag only.
+  </Step>
+  <Step title="Apply suppressions">
+    Blocks interpretation when context makes it unsafe.
+  </Step>
+  <Step title="Apply hardening rules">
+    Prevents over-diagnosis or premature conclusions.
+  </Step>
+  <Step title="Screen contraindications">
+    Surfaces safety blockers.
+  </Step>
+  <Step title="Assign review state">
+    Routes ambiguity to a clinician.
+  </Step>
+  <Step title="Clinician reviews">
+    The medical decision remains human.
+  </Step>
+  <Step title="Record decision trace">
+    Creates auditability.
+  </Step>
+  <Step title="Monitor follow-up">
+    Supports ongoing safety.
+  </Step>
+</Steps>
+
+## Pathway categories
+
+Consensus Engine can support multiple pathway types, but each remains under physician governance. The engine may help identify which pathway deserves attention; it does not decide which treatment the patient receives.
+
+| Pathway | Inputs | Governance |
+| --- | --- | --- |
+| Metabolic | Glucose, HbA1c, insulin, HOMA-IR, BMI, lipids | Advisory flag and clinician review |
+| Cardiometabolic | apoB, LDL-C, HDL, triglycerides, hs-CRP, blood pressure | Risk review, not automatic medication |
+| Hormonal | Thyroid, testosterone, estradiol, SHBG, cortisol, symptoms, medications | High-context clinician review |
+| Renal | Creatinine, eGFR, cystatin C, albuminuria, longitudinal trend | Chronicity and calibration-aware review |
+| Hepatic | ALT, AST, GGT, platelets, FIB-4, alcohol or medication context | Pattern review and escalation when needed |
+| Nutritional | Vitamin D, B12, ferritin, folate, magnesium, zinc | Supplement pathway only under protocol |
+| Inflammatory | hs-CRP, ferritin, WBC, symptoms, illness context | Suppression and repeat testing logic |
+| Medication safety | Liver markers, kidney markers, electrolytes, medication list | Clinician review before protocol change |
+| Longevity monitoring | Multi-marker preventive patterns | Coaching or review, not diagnosis |
+
+## Protocol linkage
+
+A protocol is different from a rule. A rule detects a condition; a protocol defines how clinicians evaluate and manage a pathway. The architecture identifies treatment and protocol linkage tables such as `TREATMENTS`, `TREATMENT_*`, and `PROTOCOL_*`.
+
+| Trigger | Protocol role |
+| --- | --- |
+| Marker in `ACTION` state | Clinician decides whether workup, repeat testing, or referral is needed |
+| Pattern suggests metabolic dysfunction | Protocol defines review, monitoring, and possible interventions |
+| Treatment candidacy flag fires | Protocol defines contraindication review and clinical decision-making |
+| Safety suppression applies | Protocol defines when to repeat testing |
+| Calibration affects interpretation | Protocol defines how clinician should consider the calibrated result |
+
+<Tip>
+  Rules can route. Protocols can guide. Clinicians decide.
+</Tip>
+
+## Required pathway inputs
+
+No pathway should run on incomplete data if missing facts materially change interpretation. Each pathway defines required, optional, blocking, review, and longitudinal inputs.
+
+| Input type | Behavior | Example |
+| --- | --- | --- |
+| Required | Must be present to evaluate the pathway safely | Fasting status for fasting metabolic markers |
+| Optional | Improves interpretation but does not block evaluation | Waist circumference in metabolic review |
+| Blocking | If present, prevents patient-facing interpretation or progression | Pregnancy for certain treatment pathways |
+| Review | If present, requires clinician interpretation | Possible hemoglobinopathy affecting HbA1c |
+| Longitudinal | Needed to determine chronicity or persistence | eGFR over 3 months for CKD logic |
+
+## Contraindication governance
+
+Treatment-adjacent pathways must include contraindication handling. A contraindication screen is a clinical safety input, not a simple form field.
+
+| Contraindication status | Engine behavior |
+| --- | --- |
+| Clearly absent | Pathway may proceed to clinician review if other criteria are met |
+| Present | Route to clinician review or block pathway depending on protocol |
+| Unknown | Do not advance patient-facing treatment language |
+| Conflicting | Route to `REQUIRES_CLINICAL_CORRELATION` |
+| High-stakes | Require clinician review before any output |
+
+The GLP-1 workflow includes contraindication screening for conditions such as MTC, MEN2, and pancreatitis before any clinician-required advisory flag can be evaluated safely. Other pathways follow the same pattern: collect safety context first, then route to clinician review.
+
+## Patient-facing language
+
+Treatment-related language must be especially cautious. The patient should never see "You are eligible," "The AI recommends this medication," "You should start this protocol," "Your treatment is approved," or "Your result means you need this intervention."
+
+| Situation | Safer language |
+| --- | --- |
+| Criteria may be met | "Possible candidate. Requires medical evaluation." |
+| More safety data needed | "A clinician needs additional safety information before this pathway can be assessed." |
+| Missing required input | "More information is needed before this can be reviewed safely." |
+| Pathway not appropriate | "This option may not be appropriate based on the information reviewed." |
+| Clinician review pending | "Your clinical team is reviewing whether this pathway is appropriate for you." |
+| Urgent finding | "This result may require urgent medical attention." |
+
+Patients never see "eligible." They see "possible candidate, requires medical evaluation." That wording standard is generalized across all treatment pathways.
+
+## Clinician-facing view
+
+The clinician sees the full reasoning behind any pathway flag: raw values, normalized values, derived values, runtime facts, criteria matched, criteria not met, the safety screen, suppression rules, hardening rules, the calibration trace, the evidence trace, lifecycle status, a patient-language draft, and the decision ID. For treatment pathways, this trace protects both the clinician and the patient.
+
+## Pathway approval lifecycle
+
+Treatment-related logic moves through the same clinical lifecycle as other rules, but with stricter review. Treatment pathways should be among the most tightly controlled objects in the schema.
+
+```
+DRAFT → READY_FOR_MD_REVIEW → MD_APPROVED → ACTIVE → DEPRECATED → RETIRED
+```
+
+Additional requirements before activation: a protocol owner assigned, evidence source attached, contraindication logic reviewed, patient language approved, clinician workflow tested, decision trace validated, golden test cases passed, rollback path defined, and Medical Director sign-off recorded.
+
+## Pathway validation
+
+Every pathway needs validation before activation, and for treatment pathways validation failures should be release blockers.
+
+| Scenario | Expected behavior |
+| --- | --- |
+| Criteria positive | Patient meets criteria and advisory flag fires |
+| Criteria negative | Patient does not meet criteria and no flag fires |
+| Missing required fact | Pathway blocks or returns insufficient data |
+| Contraindication present | Pathway routes to review or blocks |
+| Fasting unknown | Fasting-dependent interpretation does not proceed |
+| Suppression active | Pregnancy, illness, exercise, or other context suppresses output |
+| Calibration present | Pathway uses calibrated interpretation when appropriate |
+| Calibration uncertain | Pathway routes to clinician review |
+| Patient language | No automatic eligibility wording appears |
+| Clinician trace | Full rule and source trace is visible |
+| Lifecycle blocked | Draft or unapproved pathway cannot run |
+
+## Monitoring after activation
+
+Treatment pathways require monitoring after release to answer whether the pathway is clinically useful, too sensitive, too narrow, or unsafe in practice. Suggested metrics: advisory flags generated, flags reviewed by clinicians, flags rejected by clinicians, missing-data blocks, contraindication blocks, patient-language incidents, treatment starts after review, adverse event review triggers, protocol deviations, rule override frequency, and outcome follow-up completeness.
+
+## Handling clinician disagreement
+
+Clinician disagreement is a signal, not a failure. If clinicians frequently reject a pathway flag, the rule may be too broad, missing context, or using weak criteria. If clinicians often override a negative decision, the rule may be too narrow.
+
+| Pattern | Response |
+| --- | --- |
+| Many false positives | Tighten criteria or add context requirements |
+| Many false negatives | Review thresholds or missing pathway inputs |
+| Frequent missing data | Improve intake workflow |
+| Frequent contraindication uncertainty | Improve safety screen |
+| Clinicians ignore flag | Review usefulness or presentation |
+| Clinicians disagree with wording | Update patient-facing language |
+| Safety concern appears | Pause pathway and review affected decision IDs |
+
+Because decisions are traceable, these patterns can be studied rather than guessed.
+
+## Pathway retirement
+
+A pathway should be retired when it is no longer clinically appropriate, safe, or supported. Triggers include evidence changes, protocol changes, an emerging safety issue, high clinician rejection, poor monitoring performance, changed regulatory guidance, changed partner requirements, or a better pathway replacing it. The lifecycle states `DEPRECATED` and `RETIRED` ensure outdated logic does not remain active indefinitely.
+
+## AI-agent role in treatment pathways
+
+AI agents can make treatment pathways easier to operate, but only within strict boundaries. This keeps AI operational, not clinical-authoritative.
+
+| Agent may | Agent may not |
+| --- | --- |
+| Collect intake facts | Decide clinical meaning |
+| Ask missing safety questions | Clear contraindications |
+| Organize labs and history | Diagnose |
+| Run engine-based advisory flagging | Authorize treatment |
+| Prepare clinician summary (with source and decision trace) | Hide reasoning |
+| Communicate next steps in approved language | Use eligibility or prescription language |
+| Prompt follow-up per protocol | Adjust treatment independently |
+
+## Decision trace for pathways
+
+Every pathway evaluation produces a structured trace that proves the system did not silently prescribe or authorize care: pathway ID, patient facts, biomarker values, derived values, criteria result, safety gates, calibration, evidence or protocol source, lifecycle status, output (advisory flag, insufficient data, blocked, or review state), visibility, clinician decision and rationale, and follow-up plan.
+
+## Recommended pathway governance standard
+
+Every treatment pathway should meet the following standard before patient exposure. This turns treatment governance into an auditable checklist.
+
+<Check>
+  Deterministic criteria, evidence source, protocol owner, Medical Director review, contraindication screen, suppression and hardening rules, patient-language approval, clinician-required review, golden test cases, boot validator pass, runtime trace, monitoring plan, and rollback plan — all present.
+</Check>
